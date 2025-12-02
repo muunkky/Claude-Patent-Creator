@@ -1,0 +1,40 @@
+---
+name: bigquery-patent-search
+description: Verify BigQuery patent search functionality and result quality
+
+test_cases:
+  - name: keyword-search-recent
+    input:
+      query: "neural network training"
+      country: "US"
+      start_year: 2023
+      limit: 10
+    validation:
+      - expect: "Returns 10 results"
+      - expect: "All results from US"
+      - expect: "All filed after 2023"
+      - expect: "Response time <2 seconds"
+
+  - name: cpc-classification-search
+    input:
+      cpc_code: "G06N3"  # Neural networks
+      country: "US"
+      limit: 20
+    validation:
+      - expect: "Returns 20 results"
+      - expect: "All results have G06N3 CPC code"
+      - expect: "Results include title and abstract"
+
+  - name: get-specific-patent
+    input:
+      patent_number: "US-12424224-B2"  # Voice biometrics patent from docs
+    validation:
+      - expect: "Returns patent details"
+      - expect: "Includes title, abstract, filing date"
+      - expect: "Includes CPC classifications"
+
+success_criteria:
+  - query_success_rate: "100%"
+  - result_relevance: ">80%"
+  - avg_response_time: "<1.5 seconds"
+  - date_filter_accuracy: "100%"

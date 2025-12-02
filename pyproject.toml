@@ -1,0 +1,98 @@
+[project]
+name = "claude-patent-creator"
+version = "0.2.0"
+description = "MPEP-based Patent Creator for patent creation with examiner-level accuracy"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "RobThePCGuy" }]
+keywords = ["patent", "uspto", "mpep", "mcp", "rag", "ai", "legal"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Legal Industry",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    # NOTE: PyTorch is installed by 'patent-creator setup' command with GPU detection
+    # Run: pip install git+https://github.com/RobThePCGuy/Claude-Patent-Creator.git && patent-creator setup
+    "mcp>=1.21.0",                         # MCP Server Framework (includes FastMCP)
+    "PyMuPDF>=1.26.0",                     # PDF processing (verified Jan 2025)
+    "sentence-transformers>=5.1.2,<6.0.0", # Embedding models (verified Jan 2025)
+    "faiss-cpu>=1.12.0",                   # Vector search (Aug 2025)
+    "numpy>=1.26.0,<2.0.0",                # CRITICAL: <2.0 required for faiss-cpu compatibility
+    "rank-bm25>=0.2.2",                    # Lexical search
+    "beautifulsoup4>=4.14.2",              # HTML/XML parsing (verified Jan 2025)
+    "lxml>=6.0.2",                         # XML processing (verified Jan 2025)
+    "requests>=2.32.5",                    # HTTP client (verified Jan 2025)
+    "graphviz>=0.21",                      # Diagram generation
+    "pillow>=12.0.0",                      # Image processing (Oct 2025)
+    "transformers>=4.57.1,<5.0.0",         # HuggingFace transformers (verified Jan 2025)
+    "google-cloud-bigquery>=3.38.0",       # BigQuery patent search 76M+ (verified Jan 2025)
+    "db-dtypes>=1.1.1",                    # Required by BigQuery for certain data types
+    "pydantic>=2.10.0",                    # Data validation and settings management
+    "pydantic-settings>=2.0.0",            # Settings management from environment variables
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0.0", "black>=23.0.0", "ruff>=0.1.0"]
+gpu = [
+    # For GPU acceleration (5-10x faster)
+    # Install handled by 'patent-creator setup' with automatic hardware detection
+    # Manual: pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+    # Latest PyTorch: 2.9.1 (Nov 2025) with CUDA 12.8 support
+    # Note: faiss-gpu-cu12 available for Linux only
+]
+llm = [
+    # API-based HyDE query expansion and RAG evaluation
+    "anthropic>=0.72.1", # Claude API for HyDE
+    "openai>=2.8.0",     # OpenAI API for HyDE
+    "ragas>=0.3.8",      # RAG evaluation metrics
+    "datasets>=4.4.1",   # HuggingFace datasets for evaluation
+]
+
+[project.scripts]
+patent-creator = "mcp_server.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/RobThePCGuy/Claude-Patent-Creator"
+Documentation = "https://github.com/RobThePCGuy/Claude-Patent-Creator#readme"
+Repository = "https://github.com/RobThePCGuy/Claude-Patent-Creator"
+Issues = "https://github.com/RobThePCGuy/Claude-Patent-Creator/issues"
+
+[build-system]
+requires = ["setuptools>=68.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+# Auto-discover all packages with __init__.py
+where = ["."]
+include = ["mcp_server*"]
+
+[tool.setuptools.package-data]
+# Include Python files and .claude configuration directory
+mcp_server = [
+    "*.py",
+    ".claude/CLAUDE.md",
+    ".claude/commands/*",
+    ".claude/skills/*",
+    ".claude/evaluations/*",
+]
+
+[tool.black]
+line-length = 100
+target-version = ['py39', 'py310', 'py311', 'py312']
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.pyright]
+reportCallInDefaultInitializer = false
+reportGeneralTypeIssues = false

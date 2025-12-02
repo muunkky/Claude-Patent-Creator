@@ -1,0 +1,12 @@
+{
+  "include": [
+    "mcp_server",
+    "scripts"
+  ],
+  "exclude": [
+    "**/node_modules",
+    "**/__pycache__",
+    ".git"
+  ],
+  "reportCallInDefaultInitializer": false
+}
