@@ -12,6 +12,14 @@ import subprocess
 import sys
 from pathlib import Path
 
+# Ensure bare inter-module imports work when run via the `patent-creator`
+# entry point (mcp_server.cli:main).  Python only auto-adds the script's
+# directory to sys.path for direct execution, not for package entry points.
+# See: https://github.com/RobThePCGuy/Claude-Patent-Creator/issues/2
+_pkg_dir = str(Path(__file__).parent)
+if _pkg_dir not in sys.path:
+    sys.path.insert(0, _pkg_dir)
+
 # Import patent corpus management
 from patent_corpus import (
     PATENT_INDEX_DIR,
@@ -345,6 +353,11 @@ def setup_command(args):
     """
     One-command setup: installs PyTorch, downloads all sources, and builds index
     """
+    # Propagate --no-hyde as an env var so downstream modules (health_check,
+    # mpep_search) can honour it without receiving the argparse namespace.
+    if args.no_hyde:
+        os.environ["PATENT_MPEP_USE_HYDE"] = "false"
+
     print("\n" + "=" * 60, file=sys.stderr)
     print("Claude Patent Creator - Automatic Setup", file=sys.stderr)
     print("=" * 60, file=sys.stderr)

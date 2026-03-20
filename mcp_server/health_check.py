@@ -513,21 +513,29 @@ class SystemHealthChecker:
             except Exception as e:
                 models_status["reranker"] = {"ready": False, "error": str(e)}
 
-            # Test HyDE (optional)
-            try:
-                from hyde import HyDEQueryExpander
+            # Test HyDE (optional) — skip when explicitly disabled via env var
+            use_hyde = os.environ.get("PATENT_MPEP_USE_HYDE", "true").lower() != "false"
+            if use_hyde:
+                try:
+                    from hyde import HyDEQueryExpander
 
-                _ = HyDEQueryExpander(backend="auto")
-                models_status["hyde"] = {
-                    "ready": True,
-                    "optional": True,
-                    "note": "Query expansion enabled for better search results",
-                }
-            except Exception:
+                    _ = HyDEQueryExpander(backend="auto")
+                    models_status["hyde"] = {
+                        "ready": True,
+                        "optional": True,
+                        "note": "Query expansion enabled for better search results",
+                    }
+                except Exception:
+                    models_status["hyde"] = {
+                        "ready": False,
+                        "optional": True,
+                        "note": "HyDE disabled, using standard search",
+                    }
+            else:
                 models_status["hyde"] = {
                     "ready": False,
                     "optional": True,
-                    "note": "HyDE disabled, using standard search",
+                    "note": "HyDE disabled by --no-hyde flag",
                 }
 
         except ImportError as e:

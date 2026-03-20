@@ -8,12 +8,19 @@ in the tools/ subdirectory for better maintainability.
 """
 
 import os
+import platform
 import shutil
 import site
 import sys
 import zipfile
 from pathlib import Path
 from typing import Dict, Optional
+
+# macOS Apple Silicon: prevent FAISS OpenMP segfault (must precede torch/faiss imports)
+# See: https://github.com/RobThePCGuy/Claude-Patent-Creator/issues/1
+if platform.system() == "Darwin":
+    os.environ.setdefault("OMP_NUM_THREADS", "1")
+    os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 
 # Load environment variables from .env file FIRST
 try:
