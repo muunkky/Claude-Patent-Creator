@@ -515,14 +515,13 @@ class MPEPIndex:
                 chunk_count=len(self.chunks),
             )
 
-            # Load BM25 index from pickle if available
+            # Load BM25 tokenized corpus from JSON and rebuild index
             if BM25_AVAILABLE and BM25Okapi and self.bm25_file.exists():
                 try:
-                    import pickle
-
                     _log_info("Loading BM25 index from disk...")
-                    with open(self.bm25_file, "rb") as f:
-                        self.bm25 = pickle.load(f)
+                    with open(self.bm25_file, "r", encoding="utf-8") as bf:
+                        tokenized = json.load(bf)
+                    self.bm25 = BM25Okapi(tokenized)
                     _log_info("Hybrid search enabled")
                 except Exception as e:
                     _log_warning(f"Failed to load BM25 index: {e}, rebuilding...", error=str(e))
@@ -641,14 +640,12 @@ class MPEPIndex:
 
         # Build BM25 index for hybrid search
         if BM25_AVAILABLE and BM25Okapi:
-            import pickle
-
             _log_info("Building BM25 index for hybrid search...")
             tokenized = [chunk.lower().split() for chunk in texts]
             self.bm25 = BM25Okapi(tokenized)
-            # Persist BM25 index to disk
-            with open(self.bm25_file, "wb") as f:
-                pickle.dump(self.bm25, f)
+            # Persist tokenized corpus as JSON (avoids insecure pickle deserialization)
+            with open(self.bm25_file, "w", encoding="utf-8") as bf:
+                json.dump(tokenized, bf)
             _log_info("Hybrid search enabled")
 
         # Save index

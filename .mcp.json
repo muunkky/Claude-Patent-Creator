@@ -3,7 +3,7 @@
     "claude-patent-creator": {
       "command": "python",
       "args": [
-        "../mcp_server/server.py"
+        "mcp_server/server.py"
       ],
       "env": {
         "GOOGLE_CLOUD_PROJECT": "${GOOGLE_CLOUD_PROJECT}",
@@ -11,7 +11,7 @@
         "PATENT_LOG_FORMAT": "json",
         "PATENT_ENABLE_METRICS": "true",
         "PATENT_MPEP_USE_HYDE": "false",
-        "PATENT_MPEP_DEVICE": "gpu"
+        "PATENT_MPEP_DEVICE": "cpu"
       }
     }
   }

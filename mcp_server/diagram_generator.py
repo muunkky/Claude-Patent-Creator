@@ -4,6 +4,7 @@ Patent Diagram Generator
 Renders technical diagrams from DOT code with patent-style annotations
 """
 
+import os
 import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -75,6 +76,14 @@ class PatentDiagramGenerator:
         """
         if not graphviz:
             raise ImportError("Graphviz not available")
+
+        # Validate output_format and engine against whitelists
+        allowed_formats = {"svg", "png", "pdf"}
+        if output_format not in allowed_formats:
+            raise ValueError(f"Invalid output_format '{output_format}'. Must be one of: {allowed_formats}")
+        allowed_engines = {"dot", "neato", "fdp", "circo", "twopi", "sfdp"}
+        if engine not in allowed_engines:
+            raise ValueError(f"Invalid engine '{engine}'. Must be one of: {allowed_engines}")
 
         # Clean filename
         filename = re.sub(r"[^\w\-_]", "_", filename)
@@ -245,6 +254,15 @@ class PatentDiagramGenerator:
                 "Output Display": 30
             }
         """
+        # Validate svg_path is within the output directory to prevent path traversal
+        resolved_svg = svg_path.resolve()
+        resolved_output = self.output_dir.resolve()
+        if not str(resolved_svg).startswith(str(resolved_output) + os.sep) and resolved_svg.parent != resolved_output:
+            raise ValueError(
+                f"SVG path must be within the diagrams directory ({resolved_output}), "
+                f"got: {resolved_svg}"
+            )
+
         # Parse SVG
         tree = ET.parse(svg_path)
         root = tree.getroot()

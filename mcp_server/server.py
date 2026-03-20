@@ -140,6 +140,46 @@ SUBSEQUENT_PUBS_FILE = "subsequent_publications.pdf"
 
 
 # ============================================================================
+# LAZY LOADING PROXY
+# ============================================================================
+
+
+class LazyMPEPIndex:
+    """Proxy that defers MPEPIndex initialization until first attribute access.
+
+    Tool registration captures this proxy by closure but never accesses its
+    attributes until a tool is actually invoked. At that point, __getattr__
+    triggers the real MPEPIndex construction (loading SentenceTransformer,
+    CrossEncoder, FAISS, and BM25). This reduces MCP server startup from ~6s
+    to <1s.
+    """
+
+    def __init__(self, use_hyde: bool = True):
+        object.__setattr__(self, "_instance", None)
+        object.__setattr__(self, "_use_hyde", use_hyde)
+
+    def _load(self):
+        import time
+
+        instance = object.__getattribute__(self, "_instance")
+        if instance is not None:
+            return instance
+
+        _log_info("LazyMPEPIndex: Loading MPEP index (first use)...")
+        start = time.time()
+        use_hyde = object.__getattribute__(self, "_use_hyde")
+        instance = MPEPIndex(use_hyde=use_hyde)
+        instance.build_index(force_rebuild=False)
+        elapsed = time.time() - start
+        _log_info(f"LazyMPEPIndex: Ready in {elapsed:.1f}s")
+        object.__setattr__(self, "_instance", instance)
+        return instance
+
+    def __getattr__(self, name):
+        return getattr(self._load(), name)
+
+
+# ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
 
@@ -275,7 +315,96 @@ from tools.prior_art_tools import register_prior_art_tools  # noqa: E402
 from tools.diagram_tools import register_diagram_tools  # noqa: E402
 from tools.system_tools import register_system_tools  # noqa: E402
 
-# Note: Tool registration happens in main() after mpep_index is initialized
+def _register_all_tools():
+    """Register all MCP tools with the current mpep_index (eager or lazy)."""
+    register_mpep_tools(
+        mcp=mcp,
+        mpep_index=mpep_index,
+        log_info=_log_info,
+        log_error=_log_error,
+        validate_input=validate_input,
+        SearchMPEPInput=SearchMPEPInput,
+        track_performance=track_performance,
+        log_operation_result=log_operation_result,
+        PYDANTIC_AVAILABLE=PYDANTIC_AVAILABLE,
+        BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,
+    )
+
+    register_analyzer_tools(
+        mcp=mcp,
+        mpep_index=mpep_index,
+        ClaimsAnalyzer=ClaimsAnalyzer,
+        SpecificationAnalyzer=SpecificationAnalyzer,
+        FormalitiesChecker=FormalitiesChecker,
+        log_info=_log_info,
+        log_warning=_log_warning,
+        log_error=_log_error,
+        validate_input=validate_input,
+        ReviewClaimsInput=ReviewClaimsInput,
+        ReviewSpecificationInput=ReviewSpecificationInput,
+        CheckFormalitiesInput=CheckFormalitiesInput,
+        track_performance=track_performance,
+        log_operation_result=log_operation_result,
+        PYDANTIC_AVAILABLE=PYDANTIC_AVAILABLE,
+        BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,
+    )
+
+    register_uspto_tools(
+        mcp=mcp,
+        log_info=_log_info,
+        log_error=_log_error,
+        validate_input=validate_input,
+        SearchUSPTOInput=SearchUSPTOInput,
+        GetPatentInput=GetPatentInput,
+        track_performance=track_performance,
+        PYDANTIC_AVAILABLE=PYDANTIC_AVAILABLE,
+        BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,
+    )
+
+    register_bigquery_tools(
+        mcp=mcp,
+        log_info=_log_info,
+        log_error=_log_error,
+        log_warning=_log_warning,
+        validate_input=validate_input,
+        SearchBigQueryInput=SearchBigQueryInput,
+        GetPatentInput=GetPatentInput,
+        CPCSearchInput=CPCSearchInput,
+        track_performance=track_performance,
+        PYDANTIC_AVAILABLE=PYDANTIC_AVAILABLE,
+        BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,
+    )
+
+    register_prior_art_tools(
+        mcp=mcp,
+        patent_corpus_index=patent_corpus_index,
+        log_info=_log_info,
+        log_error=_log_error,
+        log_warning=_log_warning,
+        track_performance=track_performance,
+        BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,
+    )
+
+    register_diagram_tools(
+        mcp=mcp,
+        log_info=_log_info,
+        log_error=_log_error,
+        log_warning=_log_warning,
+        validate_input=validate_input,
+        RenderDiagramInput=RenderDiagramInput,
+        track_performance=track_performance,
+        PYDANTIC_AVAILABLE=PYDANTIC_AVAILABLE,
+        BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,
+    )
+
+    register_system_tools(
+        mcp=mcp,
+        mpep_index=mpep_index,
+        patent_corpus_index=patent_corpus_index,
+        log_info=_log_info,
+        log_error=_log_error,
+        BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,
+    )
 
 
 # ============================================================================
@@ -486,99 +615,19 @@ def main():
     # Initialize MPEP index
     global mpep_index
     use_hyde = not args.no_hyde
-    _log_info("Initializing MPEP index...", use_hyde=use_hyde)
-    mpep_index = MPEPIndex(use_hyde=use_hyde)
-    mpep_index.build_index(force_rebuild=args.rebuild_index)
 
-    # Register all MCP tools (now that mpep_index is initialized)
-    register_mpep_tools(
-        mcp=mcp,
-        mpep_index=mpep_index,
-        log_info=_log_info,
-        log_error=_log_error,
-        validate_input=validate_input,
-        SearchMPEPInput=SearchMPEPInput,
-        track_performance=track_performance,
-        log_operation_result=log_operation_result,
-        PYDANTIC_AVAILABLE=PYDANTIC_AVAILABLE,
-        BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,
-    )
+    if args.rebuild_index:
+        # Eager loading for index rebuild
+        _log_info("Initializing MPEP index (eager)...", use_hyde=use_hyde)
+        mpep_index = MPEPIndex(use_hyde=use_hyde)
+        mpep_index.build_index(force_rebuild=True)
+    else:
+        # Lazy loading for normal MCP server startup (<1s connect time)
+        _log_info("Initializing MPEP index (lazy — loads on first tool use)...", use_hyde=use_hyde)
+        mpep_index = LazyMPEPIndex(use_hyde=use_hyde)
 
-    register_analyzer_tools(
-        mcp=mcp,
-        mpep_index=mpep_index,
-        ClaimsAnalyzer=ClaimsAnalyzer,
-        SpecificationAnalyzer=SpecificationAnalyzer,
-        FormalitiesChecker=FormalitiesChecker,
-        log_info=_log_info,
-        log_warning=_log_warning,
-        log_error=_log_error,
-        validate_input=validate_input,
-        ReviewClaimsInput=ReviewClaimsInput,
-        ReviewSpecificationInput=ReviewSpecificationInput,
-        CheckFormalitiesInput=CheckFormalitiesInput,
-        track_performance=track_performance,
-        log_operation_result=log_operation_result,
-        PYDANTIC_AVAILABLE=PYDANTIC_AVAILABLE,
-        BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,
-    )
-
-    register_uspto_tools(
-        mcp=mcp,
-        log_info=_log_info,
-        log_error=_log_error,
-        validate_input=validate_input,
-        SearchUSPTOInput=SearchUSPTOInput,
-        GetPatentInput=GetPatentInput,
-        track_performance=track_performance,
-        PYDANTIC_AVAILABLE=PYDANTIC_AVAILABLE,
-        BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,
-    )
-
-    register_bigquery_tools(
-        mcp=mcp,
-        log_info=_log_info,
-        log_error=_log_error,
-        log_warning=_log_warning,
-        validate_input=validate_input,
-        SearchBigQueryInput=SearchBigQueryInput,
-        GetPatentInput=GetPatentInput,
-        CPCSearchInput=CPCSearchInput,
-        track_performance=track_performance,
-        PYDANTIC_AVAILABLE=PYDANTIC_AVAILABLE,
-        BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,
-    )
-
-    register_prior_art_tools(
-        mcp=mcp,
-        patent_corpus_index=patent_corpus_index,
-        log_info=_log_info,
-        log_error=_log_error,
-        log_warning=_log_warning,
-        track_performance=track_performance,
-        BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,
-    )
-
-    register_diagram_tools(
-        mcp=mcp,
-        log_info=_log_info,
-        log_error=_log_error,
-        log_warning=_log_warning,
-        validate_input=validate_input,
-        RenderDiagramInput=RenderDiagramInput,
-        track_performance=track_performance,
-        PYDANTIC_AVAILABLE=PYDANTIC_AVAILABLE,
-        BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,
-    )
-
-    register_system_tools(
-        mcp=mcp,
-        mpep_index=mpep_index,
-        patent_corpus_index=patent_corpus_index,
-        log_info=_log_info,
-        log_error=_log_error,
-        BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,
-    )
+    # Register all MCP tools (proxy is captured by closure, not accessed yet)
+    _register_all_tools()
 
     # Run health checks
     _run_health_checks()

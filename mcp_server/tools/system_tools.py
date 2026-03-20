@@ -15,7 +15,9 @@ Dependencies:
 """
 
 import json
+import os
 import shutil
+import sys
 from pathlib import Path
 from typing import Any, Dict
 
@@ -79,6 +81,39 @@ def register_system_tools(
                         "error": f"Project directory does not exist: {project_directory}",
                         "message": "Please provide a valid existing directory path",
                     }
+
+                # Reject system directories to prevent writing to sensitive locations
+                dest_resolved = dest_path.resolve()
+                if sys.platform == "win32":
+                    restricted = [
+                        os.environ.get("SystemRoot", r"C:\Windows"),
+                        os.environ.get("ProgramFiles", r"C:\Program Files"),
+                        os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)"),
+                    ]
+                    for r in restricted:
+                        r_resolved = Path(r).resolve()
+                        try:
+                            dest_resolved.relative_to(r_resolved)
+                            # dest_path is inside a restricted directory
+                            return {
+                                "success": False,
+                                "error": f"Cannot write to system directory: {dest_path}",
+                                "message": "Please provide a project directory, not a system directory",
+                            }
+                        except ValueError:
+                            pass  # Not inside this restricted path
+                else:
+                    restricted_posix = ["/etc", "/usr", "/bin", "/sbin", "/var", "/boot", "/lib", "/proc", "/sys"]
+                    dest_str = str(dest_resolved)
+                    if dest_str == "/" or any(
+                        dest_str == r or dest_str.startswith(r + "/")
+                        for r in restricted_posix
+                    ):
+                        return {
+                            "success": False,
+                            "error": f"Cannot write to system directory: {dest_path}",
+                            "message": "Please provide a project directory, not a system directory",
+                        }
 
                 dest_claude = dest_path / ".claude"
 
