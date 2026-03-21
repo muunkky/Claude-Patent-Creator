@@ -193,18 +193,11 @@ pdfs/                    # MPEP/USC/CFR PDFs (git-ignored)
 
 ## Critical Gotchas
 
-### NumPy 2.x Incompatibility with FAISS (CRITICAL)
+### NumPy 2.x and FAISS Compatibility
 
-**Problem:** faiss-cpu 1.12.0 is NOT compatible with numpy 2.x. This will cause import failures.
+**Resolved:** As of faiss-cpu 1.13.0 (Nov 2025), numpy 2.x is fully supported. The project requires `faiss-cpu>=1.13.0` and `numpy>=1.26.0,<3.0.0`.
 
-**Error:** `ImportError: numpy.core.multiarray failed to import`
-
-**Solution:** Pin numpy to <2.0.0 (already enforced in pyproject.toml)
-```bash
-pip install "numpy>=1.26.0,<2.0.0"
-```
-
-**Why:** faiss-cpu was compiled against numpy 1.x and cannot run with numpy 2.x. This is a known issue as of January 2025.
+**Legacy note:** faiss-cpu 1.12.0 and earlier were compiled against numpy 1.x and would crash with `ImportError: numpy.core.multiarray failed to import`. This was fixed upstream in [PR #4523](https://github.com/facebookresearch/faiss/pull/4523).
 
 ### PyTorch Installation Order (CRITICAL)
 
@@ -255,18 +248,11 @@ patent-creator health
 
 **Note:** Claude Code activates venv automatically. This only matters for manual terminal operations.
 
-### NumPy 2.x Compatibility
+### NumPy Version Requirements
 
-**Problem:** NumPy 2.0+ breaks FAISS and sentence-transformers with cryptic errors.
-
-**Solution:** Pin to NumPy 1.x (already enforced in pyproject.toml):
+NumPy 2.x is supported with faiss-cpu >=1.13.0 (enforced in pyproject.toml). If you encounter numpy-related import errors, ensure faiss-cpu is at least 1.13.0:
 ```bash
-pip install "numpy>=1.26.0,<2.0.0"
-```
-
-**If you accidentally install NumPy 2.x:**
-```bash
-pip install "numpy<2.0"
+pip install "faiss-cpu>=1.13.0"
 ```
 
 ### Git Bash Required on Windows
@@ -356,8 +342,8 @@ CLAUDE_CODE_GIT_BASH_PATH=C:\dev\Git\bin\bash.exe
 | **PyTorch** | 2.0 | latest | 2.9.1+cu128 | CUDA 12.8 support |
 | **sentence-transformers** | 5.1.2 | <6.0 | 5.1.2 | Requires transformers 4.41.0+ |
 | **transformers** | 4.57.1 | <5.0 | 4.57.1 | HuggingFace models |
-| **NumPy** | 1.26.0 | <2.0 | 1.26.x | **CRITICAL: <2.0 for faiss-cpu** |
-| **faiss-cpu** | 1.12.0 | latest | 1.12.0 | Incompatible with numpy 2.x |
+| **NumPy** | 1.26.0 | <3.0 | latest | numpy 2.x supported with faiss-cpu >=1.13.0 |
+| **faiss-cpu** | 1.13.0 | latest | 1.13.2 | numpy 2.x support added in 1.13.0 |
 | **Pydantic** | 2.10.0 | latest | 2.10.0+ | V2 required |
 | **google-cloud-bigquery** | 3.38.0 | latest | 3.38.0+ | Patent search (76M+) |
 | **anthropic** | 0.72.1 | latest | 0.72.1+ | Claude API (optional) |
