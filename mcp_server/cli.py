@@ -696,7 +696,7 @@ def build_patent_index_command(args):
     # Show year range if specified
     if args.start_year or args.end_year:
         year_range = f"{args.start_year or 'earliest'} to {args.end_year or 'latest'}"
-        print(f"\n📅 Year filter: {year_range}", file=sys.stderr)
+        print(f"\nYear filter: {year_range}", file=sys.stderr)
         print("Only patents within this range will be indexed", file=sys.stderr)
 
     # Build index

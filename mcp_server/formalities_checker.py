@@ -8,7 +8,10 @@ import re
 from typing import Dict, Optional, Any
 from dataclasses import dataclass, field
 
-from analyzer_base import BaseIssue, BaseAnalyzer
+try:
+    from analyzer_base import BaseIssue, BaseAnalyzer
+except ImportError:
+    from mcp_server.analyzer_base import BaseIssue, BaseAnalyzer
 
 
 @dataclass
@@ -446,7 +449,7 @@ class FormalitiesChecker(BaseAnalyzer):
         if info > 0:
             parts.append(f"{info} INFO")
 
-        return f"[WARNING]️ Found {', '.join(parts)} formality issue(s)"
+        return f"[WARNING] Found {', '.join(parts)} formality issue(s)"
 
 
 # Example usage
@@ -471,13 +474,13 @@ if __name__ == "__main__":
     if results["results"]["abstract"]:
         print(
             f"\nAbstract: {results['results']['abstract']['word_count']} words - "
-            f"{'[OK] Compliant' if results['results']['abstract']['compliant'] else '[WARNING]️ Issues found'}"
+            f"{'[OK] Compliant' if results['results']['abstract']['compliant'] else '[WARNING] Issues found'}"
         )
 
     if results["results"]["title"]:
         print(
             f"Title: {results['results']['title']['character_count']} chars - "
-            f"{'[OK] Compliant' if results['results']['title']['compliant'] else '[WARNING]️ Issues found'}"
+            f"{'[OK] Compliant' if results['results']['title']['compliant'] else '[WARNING] Issues found'}"
         )
 
     if results["issues"]:

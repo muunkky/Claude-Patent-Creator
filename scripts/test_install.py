@@ -39,19 +39,22 @@ print(f"[OK] MCP: {mcp_version}")
 
 # Check version compatibility
 versions_ok = True
-if not torch.__version__.startswith("2.9"):
-    print(f"[WARNING] PyTorch version {torch.__version__} may not be optimal")
+torch_major_minor = tuple(int(x) for x in torch.__version__.split("+")[0].split(".")[:2])
+if torch_major_minor < (2, 0):
+    print(f"[WARNING] PyTorch version {torch.__version__} is too old (need >=2.0)")
     versions_ok = False
 
-if not transformers.__version__.startswith("4.44"):
+transformers_major = int(transformers.__version__.split(".")[0])
+if transformers_major < 4:
     print(
-        f"[WARNING] Transformers version {transformers.__version__} may have compatibility issues"
+        f"[WARNING] Transformers version {transformers.__version__} is too old (need >=4.41.0)"
     )
     versions_ok = False
 
-if not sentence_transformers.__version__.startswith("3.1"):
+st_major = int(sentence_transformers.__version__.split(".")[0])
+if st_major < 5:
     print(
-        f"[WARNING] Sentence Transformers version {sentence_transformers.__version__} may have compatibility issues"
+        f"[WARNING] Sentence Transformers version {sentence_transformers.__version__} is too old (need >=5.1.2)"
     )
     versions_ok = False
 
@@ -113,7 +116,7 @@ print("[OK] INSTALLATION VERIFIED SUCCESSFULLY!")
 print("=" * 60)
 
 if torch.cuda.is_available():
-    print("\n🚀 GPU acceleration is enabled - you'll get 5-10x faster performance!")
+    print("\n[GPU] GPU acceleration is enabled - you'll get 5-10x faster performance!")
 else:
     print("\n[CPU] Running on CPU - still works, just slower than GPU mode")
 

@@ -34,7 +34,10 @@ import threading
 from collections import defaultdict
 from typing import Any, Callable, Dict
 
-from logging_config import get_logger
+try:
+    from logging_config import get_logger
+except ImportError:
+    from mcp_server.logging_config import get_logger
 
 logger = get_logger()
 

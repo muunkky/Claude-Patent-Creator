@@ -40,14 +40,24 @@ except ImportError:
     BM25Okapi = None
     print("BM25 not available. Install with: pip install rank-bm25", file=sys.stderr)
 
-from hyde import HyDEQueryExpander  # noqa: E402
-from patent_corpus import (  # noqa: E402
-    PATENT_INDEX_DIR,
-    Patent,
-    PatentCorpusDownloader,
-    PatentTSVParser,
-)
-from utils.device import get_device  # noqa: E402
+try:
+    from hyde import HyDEQueryExpander  # noqa: E402
+    from patent_corpus import (  # noqa: E402
+        PATENT_INDEX_DIR,
+        Patent,
+        PatentCorpusDownloader,
+        PatentTSVParser,
+    )
+    from utils.device import get_device  # noqa: E402
+except ImportError:
+    from mcp_server.hyde import HyDEQueryExpander  # noqa: E402
+    from mcp_server.patent_corpus import (  # noqa: E402
+        PATENT_INDEX_DIR,
+        Patent,
+        PatentCorpusDownloader,
+        PatentTSVParser,
+    )
+    from mcp_server.utils.device import get_device  # noqa: E402
 
 
 class PatentCorpusIndex:

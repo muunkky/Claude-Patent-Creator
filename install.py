@@ -881,16 +881,16 @@ def main():
 {Colors.OKCYAN}{Colors.BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{Colors.ENDC}
 
 {Colors.OKCYAN}DOCUMENTATION:{Colors.ENDC}
-  📚 README.md                  - Quick start guide
-  📚 IMPROVEMENTS_SUMMARY.md    - Latest enhancements (NEW!)
-  📚 ADVANCED-README.md         - Technical documentation
-  📚 BIGQUERY_SETUP.md          - BigQuery configuration guide
-  📚 GPU_SETUP.md               - GPU optimization details
+  * README.md                  - Quick start guide
+  * IMPROVEMENTS_SUMMARY.md    - Latest enhancements (NEW!)
+  * ADVANCED-README.md         - Technical documentation
+  * BIGQUERY_SETUP.md          - BigQuery configuration guide
+  * GPU_SETUP.md               - GPU optimization details
 
 {Colors.OKCYAN}NEED HELP?{Colors.ENDC}
-  🐛 Issues: https://github.com/RobThePCGuy/Claude-Patent-Creator/issues
-  💬 Discussions: Ask questions in GitHub Discussions
-    📧 Contact: Please open an issue or use Discussions for support
+  * Issues: https://github.com/RobThePCGuy/Claude-Patent-Creator/issues
+  * Discussions: Ask questions in GitHub Discussions
+  * Contact: Please open an issue or use Discussions for support
 
 {Colors.OKCYAN}{Colors.BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{Colors.ENDC}
 

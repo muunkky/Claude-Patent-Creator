@@ -116,7 +116,7 @@ def main():
     if api_key:
         print(f"API Key found: {api_key[:10]}..." if len(api_key) > 10 else "API Key found")
     else:
-        print("[WARNING]️  No USPTO_API_KEY environment variable found")
+        print("[WARNING] No USPTO_API_KEY environment variable found")
         print("   Some endpoints may require authentication")
 
     # Simple test payload

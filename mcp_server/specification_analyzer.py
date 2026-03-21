@@ -9,7 +9,10 @@ from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
 from collections import defaultdict
 
-from analyzer_base import BaseIssue, BaseAnalyzer
+try:
+    from analyzer_base import BaseIssue, BaseAnalyzer
+except ImportError:
+    from mcp_server.analyzer_base import BaseIssue, BaseAnalyzer
 
 
 @dataclass
@@ -463,7 +466,7 @@ class SpecificationAnalyzer(BaseAnalyzer):
         if important > 0:
             parts.append(f"{important} IMPORTANT issue{'s' if important != 1 else ''}")
 
-        return f"[WARNING]️ Found {', '.join(parts)} in specification support"
+        return f"[WARNING] Found {', '.join(parts)} in specification support"
 
 
 # Example usage

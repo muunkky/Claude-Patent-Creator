@@ -10,7 +10,10 @@ from typing import Dict, List, Set, Any
 from dataclasses import dataclass, field
 from collections import defaultdict
 
-from analyzer_base import BaseIssue, BaseAnalyzer
+try:
+    from analyzer_base import BaseIssue, BaseAnalyzer
+except ImportError:
+    from mcp_server.analyzer_base import BaseIssue, BaseAnalyzer
 
 
 @dataclass
@@ -498,7 +501,7 @@ class ClaimsAnalyzer(BaseAnalyzer):
         if counts["minor"] > 0:
             parts.append(f"{counts['minor']} MINOR issue{'s' if counts['minor'] != 1 else ''}")
 
-        return f"[WARNING]️ Found {', '.join(parts)} requiring attention"
+        return f"[WARNING] Found {', '.join(parts)} requiring attention"
 
     def _calculate_compliance_score(
         self, claim_count: int, critical: int, important: int, minor: int
