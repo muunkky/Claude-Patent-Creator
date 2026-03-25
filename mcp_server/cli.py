@@ -891,6 +891,112 @@ def verify_config_command(args):
         return 1
 
 
+def check_bigquery_command(args):
+    """
+    Check BigQuery authentication and availability
+    """
+    print("\n" + "=" * 60, file=sys.stderr)
+    print("BigQuery Authentication Check", file=sys.stderr)
+    print("=" * 60, file=sys.stderr)
+
+    try:
+        from bigquery_search import check_bigquery_available
+    except ImportError:
+        # Fallback if imported from elsewhere
+        from mcp_server.bigquery_search import check_bigquery_available
+        
+    status = check_bigquery_available()
+    
+    if status.get("available"):
+        print("\n[OK] BigQuery is successfully authenticated and available!", file=sys.stderr)
+        print(f"  Project: {status.get('project')}", file=sys.stderr)
+        if "us_patents" in status:
+            print(f"  US Patents Indexed: {status.get('us_patents'):,}", file=sys.stderr)
+        return 0
+    else:
+        print("\n[X] BigQuery is NOT available", file=sys.stderr)
+        print(f"  Error: {status.get('error', 'Unknown error')}", file=sys.stderr)
+        if "message" in status:
+            print(f"  Details: {status.get('message')}", file=sys.stderr)
+        if "install_command" in status:
+            print(f"\n  To fix run: {status.get('install_command')}", file=sys.stderr)
+        return 1
+
+
+def health_command(args):
+    """Alias for status command"""
+    return status_command(args)
+
+
+def rebuild_index_command(args):
+    """Rebuild MPEP search index"""
+    print("\n" + "=" * 60, file=sys.stderr)
+    print("Building MPEP Search Index", file=sys.stderr)
+    print("=" * 60, file=sys.stderr)
+    
+    sources_status = check_all_sources()
+    if not sources_status["mpep"]:
+        print("\n[X] MPEP PDFs not found. Run 'patent-creator download-mpep' or 'setup' first.", file=sys.stderr)
+        return 1
+        
+    use_hyde = not getattr(args, "no_hyde", False)
+    # Propagate env var for use_hyde
+    if getattr(args, "no_hyde", False):
+        os.environ["PATENT_MPEP_USE_HYDE"] = "false"
+        
+    mpep_index = MPEPIndex(use_hyde=use_hyde)
+    mpep_index.build_index(force_rebuild=True)
+    
+    print("\n[OK] MPEP index rebuilt successfully", file=sys.stderr)
+    return 0
+
+
+def download_mpep_command(args):
+    """Download MPEP PDFs only"""
+    print("\n" + "=" * 60, file=sys.stderr)
+    print("Downloading MPEP PDFs", file=sys.stderr)
+    print("=" * 60, file=sys.stderr)
+    
+    if download_mpep_pdfs(MPEP_DOWNLOAD_URL):
+        extract_mpep_pdfs()
+        print("\n[OK] MPEP download and extraction complete", file=sys.stderr)
+        return 0
+    else:
+        print("\n[X] MPEP download failed.", file=sys.stderr)
+        return 1
+
+
+def download_all_command(args):
+    """Download all sources (MPEP + 35 USC + 37 CFR)"""
+    print("\n" + "=" * 60, file=sys.stderr)
+    print("Downloading All USPTO Sources", file=sys.stderr)
+    print("=" * 60, file=sys.stderr)
+    
+    success = True
+    if download_mpep_pdfs(MPEP_DOWNLOAD_URL):
+        extract_mpep_pdfs()
+        print("[OK] MPEP complete", file=sys.stderr)
+    else:
+        print("[X] MPEP failed", file=sys.stderr)
+        success = False
+        
+    download_35_usc()
+    print("[OK] 35 USC complete", file=sys.stderr)
+    
+    download_37_cfr()
+    print("[OK] 37 CFR complete", file=sys.stderr)
+    
+    download_subsequent_publications()
+    print("[OK] Updates complete", file=sys.stderr)
+    
+    if success:
+        print("\n[OK] All source downloads completed successfully", file=sys.stderr)
+        return 0
+    else:
+        print("\n[WARNING] Some downloads may have failed.", file=sys.stderr)
+        return 1
+
+
 def main():
     """
     Main CLI entry point
@@ -902,9 +1008,14 @@ def main():
 Examples:
   patent-creator setup                    # Setup MPEP/USC/CFR sources
   patent-creator status                   # Show MPEP installation status
+  patent-creator health                   # System health check
   patent-creator verify-config            # Verify Claude Code configuration
   patent-creator serve                    # Run the MCP server
 
+  patent-creator rebuild-index            # Rebuild MPEP index
+  patent-creator download-mpep            # Download MPEP PDFs only
+  patent-creator download-all             # Download all sources (MPEP + 35 USC + 37 CFR)
+  patent-creator check-bigquery           # Check BigQuery connection
   patent-creator download-patents         # Download PatentsView corpus (all 9.2M+ patents)
   patent-creator download-patents --max-size 10  # Limit to 10 GB
   patent-creator download-patents --no-optional  # Skip claims & descriptions (faster)
@@ -916,6 +1027,10 @@ For more information: https://github.com/RobThePCGuy/Claude-Patent-Creator
     )
 
     subparsers = parser.add_subparsers(dest="command", help="Command to run")
+
+    # Check BigQuery command
+    check_bigquery_parser = subparsers.add_parser("check-bigquery", help="Check BigQuery authentication and availability")
+    check_bigquery_parser.set_defaults(func=check_bigquery_command)
 
     # Setup command
     setup_parser = subparsers.add_parser("setup", help="Download sources and build index")
@@ -931,6 +1046,23 @@ For more information: https://github.com/RobThePCGuy/Claude-Patent-Creator
     # Status command
     status_parser = subparsers.add_parser("status", help="Show installation status")
     status_parser.set_defaults(func=status_command)
+
+    # Health command (alias for status)
+    health_parser = subparsers.add_parser("health", help="System health check (alias for status)")
+    health_parser.set_defaults(func=health_command)
+
+    # Rebuild index command
+    rebuild_parser = subparsers.add_parser("rebuild-index", help="Rebuild MPEP index")
+    rebuild_parser.add_argument("--no-hyde", action="store_true", help="Disable HyDE query expansion")
+    rebuild_parser.set_defaults(func=rebuild_index_command)
+
+    # Download MPEP command
+    download_mpep_parser = subparsers.add_parser("download-mpep", help="Download MPEP PDFs only")
+    download_mpep_parser.set_defaults(func=download_mpep_command)
+
+    # Download all command
+    download_all_parser = subparsers.add_parser("download-all", help="Download all sources (MPEP + 35 USC + 37 CFR)")
+    download_all_parser.set_defaults(func=download_all_command)
 
     # Verify config command
     verify_parser = subparsers.add_parser(

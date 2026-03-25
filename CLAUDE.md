@@ -2,7 +2,17 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Quick Start (One-Line Install)
+## Quick Start
+
+### As a Claude Code Plugin (Recommended)
+
+```bash
+# In Claude Code — add the marketplace and install the plugin
+/plugin marketplace add RobThePCGuy/Claude-Patent-Creator
+/plugin install claude-patent-creator-standalone@claude-patent-creator
+```
+
+### As a pip Package (MCP Server Mode)
 
 ```bash
 # One-line install (works with or without venv)
@@ -172,6 +182,10 @@ Quick-access workflows for common patent tasks:
 ### Directory Structure
 
 ```
+.claude-plugin/          # Plugin marketplace + manifest
++-- plugin.json          # Plugin identity and component paths
++-- marketplace.json     # Marketplace catalog for distribution
+
 mcp_server/              # Core MCP server and tools
 +-- server.py            # FastMCP server entry point (main)
 +-- mpep_search.py       # MPEP/USC/CFR hybrid RAG search
@@ -180,10 +194,11 @@ mcp_server/              # Core MCP server and tools
 +-- specification_analyzer.py  # 112(a) adequacy checker
 +-- formalities_checker.py     # MPEP 608 formalities
 +-- diagram_generator.py       # Graphviz diagram tools
-+-- .claude/             # Claude Code integration
-    +-- commands/        # Slash commands
-    +-- skills/          # Specialized skills with reference docs
 
+commands/                # Slash commands (11)
+skills/                  # Specialized skills (15)
+agents/                  # Autonomous agents (10)
+hooks/                   # Event-driven hooks
 scripts/                 # Testing and setup utilities
 data/                    # Index storage (git-ignored)
 pdfs/                    # MPEP/USC/CFR PDFs (git-ignored)

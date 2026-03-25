@@ -1,10 +1,12 @@
 {
   "name": "claude-patent-creator-standalone",
-  "version": "1.0.0",
   "description": "Complete self-contained patent creation system - NO MCP server required. Uses Claude Code skills, agents, commands, and hooks.",
   "author": {
     "name": "RobThePCGuy"
   },
+  "homepage": "https://github.com/RobThePCGuy/Claude-Patent-Creator",
+  "repository": "https://github.com/RobThePCGuy/Claude-Patent-Creator",
+  "license": "MIT",
   "keywords": [
     "patent",
     "uspto",

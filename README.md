@@ -128,12 +128,18 @@ patent-creator setup
 ### Option 3: Claude Code Plugin (Standalone Mode)
 
 ```bash
-# In Claude Code
-/plugin marketplace add C:\Users\<YOUR_USER>\Desktop\Projects
-/plugin install claude-patent-creator-standalone
+# In Claude Code — add the marketplace and install the plugin
+/plugin marketplace add RobThePCGuy/Claude-Patent-Creator
+/plugin install claude-patent-creator-standalone@claude-patent-creator
 
 # Run setup command
-/setup-patent-system
+/claude-patent-creator-standalone:setup-patent-system
+```
+
+For local development, you can load the plugin directly without installing:
+
+```bash
+claude --plugin-dir ./Claude-Patent-Creator
 ```
 
 ---
@@ -191,23 +197,41 @@ Skills activate automatically based on your task:
 ## CLI Commands
 
 ```bash
-# System health check
+# Setup MPEP/USC/CFR sources
+patent-creator setup
+
+# Show installation status
+patent-creator status
+
+# System health check (alias for status)
 patent-creator health
+
+# Verify Claude Code MCP configuration
+patent-creator verify-config
+
+# Run the MCP server
+patent-creator serve
 
 # Rebuild MPEP index
 patent-creator rebuild-index
-
-# Verify MCP configuration
-patent-creator verify-config
-
-# Check BigQuery authentication
-patent-creator check-bigquery
 
 # Download MPEP PDFs only
 patent-creator download-mpep
 
 # Download all sources (MPEP + 35 USC + 37 CFR)
 patent-creator download-all
+
+# Check BigQuery connection
+patent-creator check-bigquery
+
+# Download PatentsView corpus (9.2M+ patents)
+patent-creator download-patents
+
+# Build or rebuild patent search index
+patent-creator build-patent-index
+
+# Show patent corpus status
+patent-creator patents-status
 ```
 
 ---
@@ -304,16 +328,22 @@ CLAUDE_CODE_GIT_BASH_PATH=C:\dev\Git\bin\bash.exe
 ### BigQuery Setup (Optional)
 
 ```bash
-# Install Google Cloud SDK
+# 1. Install Google Cloud SDK
 # https://cloud.google.com/sdk/docs/install
 
-# Authenticate
+# 2. Authenticate
 gcloud auth application-default login
 
-# Set project
-export GOOGLE_CLOUD_PROJECT=your-project-id
+# 3. Set the quota project (Replace with your project ID)
+gcloud auth application-default set-quota-project your-project-id
 
-# Test connection
+# 4. Set the project environment variable
+# Windows:
+$env:GOOGLE_CLOUD_PROJECT="your-project-id"
+# Linux/macOS:
+export GOOGLE_CLOUD_PROJECT="your-project-id"
+
+# 5. Test connection
 patent-creator check-bigquery
 ```
 
@@ -359,10 +389,28 @@ Agents work independently while you continue other tasks.
 
 ---
 
+## Plugin Installation
+
+This project is available as a Claude Code plugin from the GitHub marketplace:
+
+```
+/plugin marketplace add RobThePCGuy/Claude-Patent-Creator
+/plugin install claude-patent-creator-standalone@claude-patent-creator
+```
+
+Once installed, all skills are namespaced under `claude-patent-creator-standalone:` (e.g., `/claude-patent-creator-standalone:create-patent`).
+
+To submit to the official Anthropic marketplace, visit [claude.ai/settings/plugins/submit](https://claude.ai/settings/plugins/submit) or [platform.claude.com/plugins/submit](https://platform.claude.com/plugins/submit).
+
+---
+
 ## Architecture
 
 ```
 claude-patent-creator/
+├── .claude-plugin/          # Plugin marketplace + manifest
+│   ├── plugin.json          # Plugin identity and component paths
+│   └── marketplace.json     # Marketplace catalog for distribution
 ├── mcp_server/              # MCP server core
 │   ├── server.py            # FastMCP entry point
 │   ├── mpep_search.py       # Hybrid RAG search engine
