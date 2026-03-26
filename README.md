@@ -222,7 +222,10 @@ patent-creator patents-status    # Show patent corpus status
 
 | Tool | What it does |
 |---|---|
-| `render_diagram` | Generate patent-style diagrams (block, flowchart, system architecture) |
+| `render_diagram` | Generate patent-style diagrams from Graphviz DOT code |
+| `create_flowchart` | Build a flowchart from a list of steps and connections |
+| `create_block_diagram` | Build a block diagram from components and relationships |
+| `add_diagram_references` | Add patent reference numbers to an existing SVG diagram |
 | `get_diagram_templates` | List available diagram templates |
 
 ### System
@@ -235,6 +238,7 @@ patent-creator patents-status    # Show patent corpus status
 | `check_patent_corpus_status` | Patent corpus status |
 | `check_uspto_api_status` | USPTO API connectivity |
 | `get_patent_details` | Combined patent retrieval across sources |
+| `setup_claude_config` | Copy .claude configuration (skills, commands) to a project directory |
 
 ---
 
@@ -247,12 +251,15 @@ You don't need to call these directly. Just describe what you want to do and the
 | Skill | When it activates | What it brings |
 |---|---|---|
 | **setup-assistant** | Installing, configuring, or troubleshooting | Full setup lifecycle guidance |
-| **patent-reviewer** | Reviewing applications for compliance | Expert review with automated checking |
-| **patent-search** | Searching patents or prior art | BigQuery + API search workflows |
+| **patent-reviewer** | Reviewing a complete application for compliance | Comprehensive review (claims + spec + formalities) |
+| **patent-claims-analyzer** | Reviewing claims specifically for 35 USC 112(b) | Deep-dive claims analysis (definiteness, antecedent basis, structure) |
+| **patent-search** | Searching patents or prior art | BigQuery + PatentsView API search workflows |
+| **bigquery-patent-search** | Quick BigQuery-only patent search | Keyword, CPC, and patent detail retrieval across 76M+ patents |
 | **mpep-search** | Finding MPEP sections or regulations | Hybrid RAG search |
-| **patent-diagrams** | Creating technical diagrams | Graphviz diagram generation |
-| **prior-art-search** | Novelty or freedom-to-operate analysis | Prior art discovery workflows |
-| **index-manager** | Building or rebuilding the search index | MPEP index management |
+| **patent-diagram-generator** | Creating technical diagrams | Flowcharts, block diagrams, system architectures via Graphviz |
+| **patent-application-creator** | Drafting a patent application interactively | Guided end-to-end workflow (prior art, claims, spec, diagrams, compliance) |
+| **prior-art-search** | Novelty or freedom-to-operate analysis | 7-step prior art discovery methodology |
+| **index-manager** | Building or rebuilding the search index | MPEP index lifecycle management |
 | **development-assistant** | Adding features or creating tools | Development workflows and patterns |
 | **troubleshooting-assistant** | Something's broken | Systematic 6-step diagnostics |
 | **testing-assistant** | Running tests or validation | Test suite execution |
@@ -373,11 +380,11 @@ claude mcp add ... -- "C:\Users\YourName\venv\Scripts\python.exe"
 | Package | Version | Purpose |
 |---|---|---|
 | mcp | >=1.21.0 | MCP server framework |
-| sentence-transformers | >=5.1.2 | Text embeddings |
+| sentence-transformers | >=5.1.2, <6.0.0 | Text embeddings |
 | faiss-cpu | >=1.13.0 | Vector similarity search |
 | numpy | >=1.26.0, <3.0.0 | Array operations |
 | rank-bm25 | >=0.2.2 | Lexical search |
-| transformers | >=4.57.1 | HuggingFace models |
+| transformers | >=4.57.1, <5.0.0 | HuggingFace models |
 | google-cloud-bigquery | >=3.38.0 | Patent search |
 | pydantic | >=2.10.0 | Data validation |
 | graphviz | >=0.21 | Diagram generation |
@@ -404,7 +411,7 @@ claude-patent-creator/
 │   ├── diagram_generator.py       # Graphviz diagrams
 │   ├── tools/               # MCP tool definitions
 │   └── index/               # FAISS + BM25 index (git-ignored)
-├── skills/                  # Claude Code skills (15)
+├── skills/                  # Claude Code skills (13)
 ├── agents/                  # Autonomous agents (10)
 ├── commands/                # Slash commands (11)
 ├── hooks/                   # Event-driven automation

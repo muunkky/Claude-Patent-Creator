@@ -94,9 +94,12 @@ Claude will automatically activate specialized skills based on your task. These 
 | **troubleshooting-assistant** | Encountering errors, performance issues, or unexpected behavior | Systematic 6-step diagnostic methodology for all components |
 | **testing-assistant** | Running tests, validation, or quality assurance | Complete test suite execution and validation workflows |
 | **patent-reviewer** | Reviewing patent applications for USPTO compliance | Expert review system with automated compliance checking |
+| **patent-claims-analyzer** | Reviewing claims specifically for 35 USC 112(b) | Deep-dive claims analysis (definiteness, antecedent basis, structure) |
 | **patent-search** | Searching patents, prior art, or competitive intelligence | BigQuery (76M+) and PatentsView API search workflows |
+| **bigquery-patent-search** | Quick BigQuery-only patent searching | Keyword, CPC, and patent detail retrieval across 76M+ patents |
 | **mpep-search** | Finding MPEP sections, statutes, or regulations | Hybrid RAG search across MPEP, 35 USC, 37 CFR |
-| **patent-diagrams** | Creating technical diagrams for patents | Graphviz-based diagram generation |
+| **patent-diagram-generator** | Creating technical diagrams for patents | Graphviz-based diagram generation |
+| **patent-application-creator** | Drafting patent applications interactively | Guided end-to-end creation (prior art, claims, spec, diagrams, compliance) |
 | **prior-art-search** | Conducting novelty or freedom-to-operate analysis | Prior art search and analysis workflows |
 
 Each skill includes detailed reference documentation in `skills/[skill-name]/reference/` directories.
