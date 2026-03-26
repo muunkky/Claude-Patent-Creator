@@ -8,7 +8,7 @@ import os
 import platform
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 try:
     from google.api_core.exceptions import NotFound
@@ -98,7 +98,7 @@ class BigQueryPatentSearch:
 
                 creds_path = _get_gcloud_credentials_path()
                 if creds_path.exists():
-                    with open(creds_path) as f:
+                    with creds_path.open() as f:
                         creds_data = json.load(f)
                         self.billing_project = creds_data.get("quota_project_id")
             except Exception:
@@ -142,7 +142,7 @@ class BigQueryPatentSearch:
             self.client = None
             self.billing_project = None
 
-    def check_availability(self) -> Dict[str, Any]:
+    def check_availability(self) -> dict[str, Any]:
         """
         Check if BigQuery is available and credentials are configured
 
@@ -197,8 +197,8 @@ class BigQueryPatentSearch:
         offset: int = 0,
         start_year: Optional[int] = None,
         end_year: Optional[int] = None,
-        search_fields: Optional[List[str]] = None,
-    ) -> List[Dict[str, Any]]:
+        search_fields: Optional[list[str]] = None,
+    ) -> list[dict[str, Any]]:
         """
         Search patents by keyword matching in abstract, title, or claims
 
@@ -216,7 +216,7 @@ class BigQueryPatentSearch:
         """
         if search_fields is None:
             search_fields = ["abstract", "title", "claims"]
-            
+
         if not self.client:
             raise RuntimeError("BigQuery client not initialized")
 
@@ -339,7 +339,7 @@ class BigQueryPatentSearch:
 
             raise
 
-    def get_patent_details(self, patent_number: str) -> Optional[Dict[str, Any]]:
+    def get_patent_details(self, patent_number: str) -> Optional[dict[str, Any]]:
         """
         Get full details for a specific patent by publication number
 
@@ -452,7 +452,7 @@ class BigQueryPatentSearch:
 
     def search_by_cpc(
         self, cpc_code: str, limit: int = 20, country: str = "US"
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Search patents by CPC classification code
 
@@ -565,7 +565,7 @@ class BigQueryPatentSearch:
             return None
 
 
-def check_bigquery_available() -> Dict[str, Any]:
+def check_bigquery_available() -> dict[str, Any]:
     """
     Check if BigQuery is available and configured
 

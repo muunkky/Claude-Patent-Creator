@@ -12,7 +12,7 @@ Historical context:
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 # Add mcp_server to path for imports
 PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
@@ -81,7 +81,7 @@ class PriorArtHit:
     score: float
     """Relevance score (0.0-1.0, higher = more relevant)"""
 
-    cpc: Optional[List[str]] = None
+    cpc: Optional[list[str]] = None
     """Cooperative Patent Classification codes (e.g., ['G06F17/30', 'H04L29/08'])"""
 
     filing_date: Optional[str] = None
@@ -99,7 +99,7 @@ class PriorArtHit:
     country: Optional[str] = None
     """Country code (e.g., 'US', 'EP', 'JP', 'CN')"""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "patent_id": self.patent_id,
@@ -133,7 +133,7 @@ class PatentDocument:
     abstract: str
     """Patent abstract"""
 
-    claims: List[str]
+    claims: list[str]
     """List of patent claims (ordered, typically 1-indexed)"""
 
     country: str
@@ -145,13 +145,13 @@ class PatentDocument:
     description: Optional[str] = None
     """Full specification/description text (can be very large)"""
 
-    assignees: List[str] = field(default_factory=list)
+    assignees: list[str] = field(default_factory=list)
     """List of assignee/applicant organization names"""
 
-    inventors: List[str] = field(default_factory=list)
+    inventors: list[str] = field(default_factory=list)
     """List of inventor names"""
 
-    cpc_codes: List[str] = field(default_factory=list)
+    cpc_codes: list[str] = field(default_factory=list)
     """List of Cooperative Patent Classification codes"""
 
     filing_date: Optional[str] = None
@@ -169,13 +169,13 @@ class PatentDocument:
     family_id: Optional[str] = None
     """Patent family ID (links related patents across countries)"""
 
-    references_cited: Optional[List[str]] = None
+    references_cited: Optional[list[str]] = None
     """List of patent numbers cited by this patent"""
 
-    cited_by: Optional[List[str]] = None
+    cited_by: Optional[list[str]] = None
     """List of patent numbers that cite this patent (forward citations)"""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "patent_number": self.patent_number,
@@ -209,9 +209,9 @@ def search_prior_art(
     country: Optional[str] = None,
     start_year: Optional[int] = None,
     end_year: Optional[int] = None,
-    cpc_filter: Optional[List[str]] = None,
-    search_fields: Optional[List[str]] = None,
-) -> Dict[str, Any]:
+    cpc_filter: Optional[list[str]] = None,
+    search_fields: Optional[list[str]] = None,
+) -> dict[str, Any]:
     """
     Search for relevant prior art patents using Google BigQuery.
 
@@ -346,7 +346,7 @@ def search_prior_art(
         }
 
 
-def get_patent_details(patent_id: str) -> Dict[str, Any]:
+def get_patent_details(patent_id: str) -> dict[str, Any]:
     """
     Retrieve full patent document by patent number using Google BigQuery.
 
@@ -449,7 +449,7 @@ def get_patent_details(patent_id: str) -> Dict[str, Any]:
 
 def search_semantic_similar(
     seed_patent: str, top_k: int = 20, country: Optional[str] = None, min_similarity: float = 0.7
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Find patents semantically similar to a seed patent (Priority 2 - NOT YET IMPLEMENTED).
 
@@ -480,8 +480,8 @@ def search_hybrid_multistage(
     country: Optional[str] = None,
     start_year: Optional[int] = None,
     end_year: Optional[int] = None,
-    cpc_filter: Optional[List[str]] = None,
-) -> Dict[str, Any]:
+    cpc_filter: Optional[list[str]] = None,
+) -> dict[str, Any]:
     """
     Multi-stage hybrid search: Keyword -> Semantic -> Rerank (Priority 2 - NOT YET IMPLEMENTED).
 
@@ -513,7 +513,7 @@ def search_hybrid_multistage(
     )
 
 
-def check_backend_availability() -> Dict[str, Any]:
+def check_backend_availability() -> dict[str, Any]:
     """
     Check if BigQuery backend is configured and available.
 

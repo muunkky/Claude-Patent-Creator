@@ -17,7 +17,7 @@ Dependencies:
     - Logging and monitoring from logging_config.py and monitoring.py
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 
 def register_uspto_tools(
@@ -66,7 +66,7 @@ def register_uspto_tools(
         end_year: Optional[int] = None,
         application_type: Optional[str] = None,
         status: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search USPTO Open Data Portal API (live database). Requires USPTO_API_KEY environment variable. Supports year range and application type filters."""
         try:
             # Validate inputs
@@ -146,7 +146,7 @@ def register_uspto_tools(
 
     @mcp.tool()
     @track_performance("tool_get_uspto_patent") if BEST_PRACTICES_AVAILABLE else lambda f: f
-    def get_uspto_patent(patent_number: str) -> Dict[str, Any]:
+    def get_uspto_patent(patent_number: str) -> dict[str, Any]:
         """Get detailed patent information from USPTO API by patent number (e.g., "11234567" or "US11234567")."""
         try:
             # Validate inputs
@@ -201,7 +201,7 @@ def register_uspto_tools(
     @track_performance("tool_get_recent_uspto_patents") if BEST_PRACTICES_AVAILABLE else lambda f: f
     def get_recent_uspto_patents(
         days: int = 7, application_type: str = "Utility", limit: int = 100
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get recently granted patents from USPTO API. Default: last 7 days of utility patents."""
         try:
             log_info(
@@ -251,7 +251,7 @@ def register_uspto_tools(
 
     @mcp.tool()
     @track_performance("tool_check_uspto_api_status") if BEST_PRACTICES_AVAILABLE else lambda f: f
-    def check_uspto_api_status() -> Dict[str, Any]:
+    def check_uspto_api_status() -> dict[str, Any]:
         """Check USPTO API accessibility and API key validity."""
         try:
             log_info("check_uspto_api_status_tool_called")

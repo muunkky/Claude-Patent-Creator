@@ -6,7 +6,7 @@ Provides diagram generation operations for patent-style technical illustrations.
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 # Add mcp_server to path for imports
 PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
@@ -42,7 +42,7 @@ def _timestamp_filename(base_name: str) -> str:
     return f"{base_name}_{timestamp}"
 
 
-def create_flowchart(steps: List[str]) -> Dict[str, Any]:
+def create_flowchart(steps: list[str]) -> dict[str, Any]:
     """
     Create a flowchart from an ordered list of steps.
 
@@ -117,7 +117,7 @@ def create_flowchart(steps: List[str]) -> Dict[str, Any]:
         return {"success": False, "error": f"Failed to create flowchart: {str(e)}"}
 
 
-def create_block_diagram(blocks: List[dict], connections: List[dict]) -> Dict[str, Any]:
+def create_block_diagram(blocks: list[dict], connections: list[dict]) -> dict[str, Any]:
     """
     Create a block diagram showing components and connections.
 
@@ -216,7 +216,7 @@ def create_block_diagram(blocks: List[dict], connections: List[dict]) -> Dict[st
         return {"success": False, "error": f"Failed to create block diagram: {str(e)}"}
 
 
-def render_diagram(dot: str) -> Dict[str, Any]:
+def render_diagram(dot: str) -> dict[str, Any]:
     """
     Render arbitrary Graphviz DOT code into a diagram.
 
@@ -272,7 +272,7 @@ def render_diagram(dot: str) -> Dict[str, Any]:
         return {"success": False, "error": f"Failed to render diagram: {str(e)}"}
 
 
-def add_diagram_references(svg_path: str, reference_map: "dict[str, int]") -> Dict[str, Any]:
+def add_diagram_references(svg_path: str, reference_map: "dict[str, int]") -> dict[str, Any]:
     """
     Add patent-style reference numbers to an existing SVG diagram.
 
@@ -297,7 +297,7 @@ def add_diagram_references(svg_path: str, reference_map: "dict[str, int]") -> Di
     if not svg_path_obj.exists():
         return {"success": False, "error": f"SVG file not found: {svg_path}"}
 
-    if not svg_path_obj.suffix.lower() == ".svg":
+    if svg_path_obj.suffix.lower() != ".svg":
         return {"success": False, "error": f"File must be an SVG file, got: {svg_path_obj.suffix}"}
 
     try:
@@ -320,7 +320,7 @@ def add_diagram_references(svg_path: str, reference_map: "dict[str, int]") -> Di
         return {"success": False, "error": f"Failed to add references: {str(e)}"}
 
 
-def get_diagram_templates() -> Dict[str, Any]:
+def get_diagram_templates() -> dict[str, Any]:
     """
     Get pre-built diagram templates for common patent illustration patterns.
 
@@ -366,7 +366,7 @@ def get_diagram_templates() -> Dict[str, Any]:
         return {"success": False, "error": f"Failed to get templates: {str(e)}"}
 
 
-def check_graphviz_status() -> Dict[str, Any]:
+def check_graphviz_status() -> dict[str, Any]:
     """
     Check Graphviz installation status.
 

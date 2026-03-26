@@ -22,6 +22,8 @@ if _pkg_dir not in sys.path:
 
 # Import patent corpus management
 # Import hardware detection for PyTorch installation
+import contextlib
+
 from hardware_detect import (
     check_pytorch_installation,
     get_pytorch_install_command,
@@ -47,7 +49,6 @@ from server import (
     download_mpep_pdfs,
     download_subsequent_publications,
     extract_mpep_pdfs,
-    mcp,
 )
 
 # Import path utilities for cross-platform path handling
@@ -191,14 +192,12 @@ def configure_mcp_server():
         return False
 
     # Remove existing registration if present
-    try:
+    with contextlib.suppress(Exception):
         subprocess.run(
             ["claude", "mcp", "remove", "claude-patent-creator"],
             capture_output=True,
             timeout=10,
         )
-    except Exception:
-        pass
 
     # Register the MCP server with correct format
     # Use PathFormatter for proper cross-platform path handling
@@ -537,16 +536,16 @@ def run_server(args):
     _auto_copy_claude_config()
 
     print("Starting MCP server...", file=sys.stderr)
-    
+
     # Run the server.py script as a subprocess to ensure clean initialization
     # and proper tool registration exactly like 'claude mcp add' does
     server_script = Path(__file__).parent / "server.py"
     cmd = [sys.executable, str(server_script)]
-    
+
     env = os.environ.copy()
     if args.no_hyde:
         env["PATENT_MPEP_USE_HYDE"] = "false"
-        
+
     try:
         result = subprocess.run(cmd, env=env)
         return result.returncode
@@ -596,11 +595,11 @@ def status_command(args):
         if metadata_file.exists():
             import json
 
-            with open(metadata_file, encoding="utf-8") as f:
+            with metadata_file.open(encoding="utf-8") as f:
                 data = json.load(f)
                 print(f"  Chunks:    {len(data['chunks']):,}", file=sys.stderr)
                 print(
-                    f"  Sections:  {len(set(m['section'] for m in data['metadata'])):,}",
+                    f"  Sections:  {len({m['section'] for m in data['metadata']}):,}",
                     file=sys.stderr,
                 )
 
@@ -748,10 +747,10 @@ def patents_status_command(args):
     if index_exists:
         metadata_file = PATENT_INDEX_DIR / "patent_metadata.json"
         if metadata_file.exists():
-            with open(metadata_file, encoding="utf-8") as f:
+            with metadata_file.open(encoding="utf-8") as f:
                 data = json.load(f)
                 num_chunks = len(data["chunks"])
-                num_patents = len(set(m["patent_id"] for m in data["metadata"]))
+                num_patents = len({m["patent_id"] for m in data["metadata"]})
                 print(f"  Patents: {num_patents:,}", file=sys.stderr)
                 print(f"  Chunks: {num_chunks:,}", file=sys.stderr)
 
@@ -819,7 +818,7 @@ def verify_config_command(args):
         return 1
 
     try:
-        with open(config_path, encoding="utf-8") as f:
+        with config_path.open(encoding="utf-8") as f:
             config = json.load(f)
 
         if "mcpServers" not in config:
@@ -907,9 +906,9 @@ def check_bigquery_command(args):
     except ImportError:
         # Fallback if imported from elsewhere
         from mcp_server.bigquery_search import check_bigquery_available
-        
+
     status = check_bigquery_available()
-    
+
     if status.get("available"):
         print("\n[OK] BigQuery is successfully authenticated and available!", file=sys.stderr)
         print(f"  Project: {status.get('project')}", file=sys.stderr)
@@ -936,20 +935,20 @@ def rebuild_index_command(args):
     print("\n" + "=" * 60, file=sys.stderr)
     print("Building MPEP Search Index", file=sys.stderr)
     print("=" * 60, file=sys.stderr)
-    
+
     sources_status = check_all_sources()
     if not sources_status["mpep"]:
         print("\n[X] MPEP PDFs not found. Run 'patent-creator download-mpep' or 'setup' first.", file=sys.stderr)
         return 1
-        
+
     use_hyde = not getattr(args, "no_hyde", False)
     # Propagate env var for use_hyde
     if getattr(args, "no_hyde", False):
         os.environ["PATENT_MPEP_USE_HYDE"] = "false"
-        
+
     mpep_index = MPEPIndex(use_hyde=use_hyde)
     mpep_index.build_index(force_rebuild=True)
-    
+
     print("\n[OK] MPEP index rebuilt successfully", file=sys.stderr)
     return 0
 
@@ -959,7 +958,7 @@ def download_mpep_command(args):
     print("\n" + "=" * 60, file=sys.stderr)
     print("Downloading MPEP PDFs", file=sys.stderr)
     print("=" * 60, file=sys.stderr)
-    
+
     if download_mpep_pdfs(MPEP_DOWNLOAD_URL):
         extract_mpep_pdfs()
         print("\n[OK] MPEP download and extraction complete", file=sys.stderr)
@@ -974,7 +973,7 @@ def download_all_command(args):
     print("\n" + "=" * 60, file=sys.stderr)
     print("Downloading All USPTO Sources", file=sys.stderr)
     print("=" * 60, file=sys.stderr)
-    
+
     success = True
     if download_mpep_pdfs(MPEP_DOWNLOAD_URL):
         extract_mpep_pdfs()
@@ -982,16 +981,16 @@ def download_all_command(args):
     else:
         print("[X] MPEP failed", file=sys.stderr)
         success = False
-        
+
     download_35_usc()
     print("[OK] 35 USC complete", file=sys.stderr)
-    
+
     download_37_cfr()
     print("[OK] 37 CFR complete", file=sys.stderr)
-    
+
     download_subsequent_publications()
     print("[OK] Updates complete", file=sys.stderr)
-    
+
     if success:
         print("\n[OK] All source downloads completed successfully", file=sys.stderr)
         return 0

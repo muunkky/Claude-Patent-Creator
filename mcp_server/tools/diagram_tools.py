@@ -19,7 +19,7 @@ Dependencies:
 """
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 
 def register_diagram_tools(
@@ -54,7 +54,7 @@ def register_diagram_tools(
         filename: str = "diagram",
         output_format: str = "svg",
         engine: str = "dot",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Render a technical diagram from Graphviz DOT code.
 
@@ -115,8 +115,8 @@ def register_diagram_tools(
     @mcp.tool()
     @track_performance("tool_create_flowchart") if BEST_PRACTICES_AVAILABLE else lambda f: f
     def create_flowchart(
-        steps: List[Dict[str, Any]], filename: str = "flowchart", output_format: str = "svg"
-    ) -> Dict[str, Any]:
+        steps: list[dict[str, Any]], filename: str = "flowchart", output_format: str = "svg"
+    ) -> dict[str, Any]:
         """
         Create a patent-style flowchart from a list of steps.
 
@@ -173,11 +173,11 @@ def register_diagram_tools(
     @mcp.tool()
     @track_performance("tool_create_block_diagram") if BEST_PRACTICES_AVAILABLE else lambda f: f
     def create_block_diagram(
-        blocks: List[Dict[str, Any]],
-        connections: List[List[str]],
+        blocks: list[dict[str, Any]],
+        connections: list[list[str]],
         filename: str = "block_diagram",
         output_format: str = "svg",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Create a patent-style block diagram showing system components and connections.
 
@@ -206,7 +206,6 @@ def register_diagram_tools(
             ]
         """
         try:
-            from typing import Tuple
 
             from diagram_generator import (
                 PatentDiagramGenerator,
@@ -221,7 +220,7 @@ def register_diagram_tools(
                 }
 
             # Convert connections to tuples with proper typing
-            connections_tuples: List[Tuple[str, str, Optional[str]]] = [
+            connections_tuples: list[tuple[str, str, Optional[str]]] = [
                 (conn[0], conn[1], conn[2] if len(conn) > 2 else None) for conn in connections
             ]
 
@@ -247,7 +246,7 @@ def register_diagram_tools(
 
     @mcp.tool()
     @track_performance("tool_add_diagram_references") if BEST_PRACTICES_AVAILABLE else lambda f: f
-    def add_diagram_references(svg_path: str, reference_map: Dict[str, int]) -> Dict[str, Any]:
+    def add_diagram_references(svg_path: str, reference_map: dict[str, int]) -> dict[str, Any]:
         """
         Add patent-style reference numbers to an existing SVG diagram.
 
@@ -286,7 +285,7 @@ def register_diagram_tools(
 
     @mcp.tool()
     @track_performance("tool_get_diagram_templates") if BEST_PRACTICES_AVAILABLE else lambda f: f
-    def get_diagram_templates() -> Dict[str, Any]:
+    def get_diagram_templates() -> dict[str, Any]:
         """
         Get common patent diagram templates in DOT language.
 
@@ -321,7 +320,7 @@ def register_diagram_tools(
         if BEST_PRACTICES_AVAILABLE
         else lambda f: f
     )
-    def check_diagram_tools_status() -> Dict[str, Any]:
+    def check_diagram_tools_status() -> dict[str, Any]:
         """
         Check if diagram generation tools are installed and ready.
 

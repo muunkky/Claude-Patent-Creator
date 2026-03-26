@@ -16,7 +16,7 @@ Dependencies:
     - mpep_index for retrieving relevant MPEP guidance
 """
 
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 
 def register_analyzer_tools(
@@ -60,7 +60,7 @@ def register_analyzer_tools(
 
     @mcp.tool()
     @track_performance("tool_review_claims") if BEST_PRACTICES_AVAILABLE else lambda f: f
-    def review_patent_claims(claims_text: str) -> Dict[str, Any]:
+    def review_patent_claims(claims_text: str) -> dict[str, Any]:
         """Analyze patent claims for 35 USC 112(b) compliance: antecedent basis, definiteness, subjective terms, cross-references, and structure."""
         try:
             # Validate inputs
@@ -142,7 +142,7 @@ def register_analyzer_tools(
 
     @mcp.tool()
     @track_performance("tool_review_specification") if BEST_PRACTICES_AVAILABLE else lambda f: f
-    def review_specification(claims_text: str, specification: str) -> Dict[str, Any]:
+    def review_specification(claims_text: str, specification: str) -> dict[str, Any]:
         """Analyze specification support for claims per 35 USC 112(a): written description, enablement, and best mode."""
         try:
             # Validate inputs
@@ -247,7 +247,7 @@ def register_analyzer_tools(
         title: Optional[str] = None,
         specification: Optional[str] = None,
         drawings_present: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Check patent application formalities per MPEP 608: abstract (50-150 words), title (<=500 chars), required sections, and drawing references."""
         try:
             # Validate inputs

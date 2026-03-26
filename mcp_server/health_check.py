@@ -8,7 +8,7 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 try:
     from logging_config import get_logger
@@ -32,7 +32,7 @@ class SystemHealthChecker:
     def __init__(self):
         self.results = {}
 
-    def check_all_dependencies(self, verbose: bool = False) -> Dict[str, Any]:
+    def check_all_dependencies(self, verbose: bool = False) -> dict[str, Any]:
         """Run all health checks and return comprehensive status"""
         if logger:
             logger.info("health_check_started")
@@ -84,7 +84,7 @@ class SystemHealthChecker:
 
         return self.results
 
-    def _check_mpep_index(self) -> Dict[str, Any]:
+    def _check_mpep_index(self) -> dict[str, Any]:
         """Check if MPEP index is built and ready"""
         index_file = INDEX_DIR / "mpep_index.faiss"
         metadata_file = INDEX_DIR / "mpep_metadata.json"
@@ -120,7 +120,7 @@ class SystemHealthChecker:
             index = faiss.read_index(str(index_file))
             chunk_count = index.ntotal
 
-            with open(metadata_file, encoding="utf-8") as f:
+            with metadata_file.open(encoding="utf-8") as f:
                 metadata = json.load(f)
 
             result = {
@@ -152,7 +152,7 @@ class SystemHealthChecker:
                 "details": "Index files exist but are corrupted. Rebuild required.",
             }
 
-    def _check_bigquery(self) -> Dict[str, Any]:
+    def _check_bigquery(self) -> dict[str, Any]:
         """Check if BigQuery patent search is available"""
         try:
             from bigquery_search import check_bigquery_available
@@ -207,7 +207,7 @@ class SystemHealthChecker:
                 "details": "BigQuery module not available",
             }
 
-    def _check_patent_corpus(self) -> Dict[str, Any]:
+    def _check_patent_corpus(self) -> dict[str, Any]:
         """Check if patent corpus is downloaded and indexed (legacy local search)"""
         try:
             from patent_corpus import PATENT_INDEX_DIR
@@ -253,7 +253,7 @@ class SystemHealthChecker:
                 "fix": "patent-creator download-patents --build-index --force",
             }
 
-    def _check_uspto_api(self) -> Dict[str, Any]:
+    def _check_uspto_api(self) -> dict[str, Any]:
         """Check USPTO API key and connectivity"""
         api_key = os.getenv("USPTO_API_KEY")
 
@@ -351,7 +351,7 @@ class SystemHealthChecker:
                 "fix": "Check network connectivity and API key validity",
             }
 
-    def _check_graphviz(self) -> Dict[str, Any]:
+    def _check_graphviz(self) -> dict[str, Any]:
         """Check if Graphviz is installed for diagram generation"""
         try:
             import subprocess
@@ -398,7 +398,7 @@ class SystemHealthChecker:
                 "required_for": ["diagram generation tools"],
             }
 
-    def _check_gpu(self) -> Dict[str, Any]:
+    def _check_gpu(self) -> dict[str, Any]:
         """Check GPU availability and status"""
         try:
             import torch
@@ -438,7 +438,7 @@ class SystemHealthChecker:
                 "fix": "pip install torch",
             }
 
-    def _check_disk_space(self) -> Dict[str, Any]:
+    def _check_disk_space(self) -> dict[str, Any]:
         """Check available disk space"""
         try:
             import shutil
@@ -478,9 +478,9 @@ class SystemHealthChecker:
                 "error": str(e),
             }
 
-    def _check_models(self) -> Dict[str, Any]:
+    def _check_models(self) -> dict[str, Any]:
         """Check if required AI models can be loaded"""
-        models_status: Dict[str, Any] = {
+        models_status: dict[str, Any] = {
             "embeddings": {"ready": False},
             "reranker": {"ready": False},
             "hyde": {"ready": False},
@@ -556,7 +556,7 @@ class SystemHealthChecker:
             "models": models_status,
         }
 
-    def _check_packages(self) -> Dict[str, Any]:
+    def _check_packages(self) -> dict[str, Any]:
         """Check if critical Python packages are installed"""
         packages = {
             "torch": False,
@@ -601,7 +601,7 @@ class SystemHealthChecker:
             "fix": "pip install -e ." if not all_installed else None,
         }
 
-    def get_warnings(self) -> List[str]:
+    def get_warnings(self) -> list[str]:
         """Get list of warnings based on health check results"""
         warnings = []
 

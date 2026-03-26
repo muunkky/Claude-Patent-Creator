@@ -97,7 +97,7 @@ def main():
         "quota_project_id": project_id,
     }
 
-    with open(creds_path, "w") as f:
+    with creds_path.open("w") as f:
         json.dump(creds_data, f, indent=2)
 
     print()

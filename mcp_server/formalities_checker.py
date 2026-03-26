@@ -6,7 +6,7 @@ Automated checking of MPEP 608 formality requirements
 
 import re
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 try:
     from analyzer_base import BaseAnalyzer, BaseIssue
@@ -44,7 +44,7 @@ class FormalitiesChecker(BaseAnalyzer):
         title: Optional[str] = None,
         specification: Optional[str] = None,
         drawings_present: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Main analysis method - checks all formality requirements
 
@@ -59,7 +59,7 @@ class FormalitiesChecker(BaseAnalyzer):
         """
         return self.check_all_formalities(abstract, title, specification, drawings_present)
 
-    def _issue_to_dict(self, issue: BaseIssue) -> Dict[str, Any]:
+    def _issue_to_dict(self, issue: BaseIssue) -> dict[str, Any]:
         """Convert FormalityIssue to dictionary"""
         if not isinstance(issue, FormalityIssue):
             # Fallback for base issues
@@ -90,7 +90,7 @@ class FormalitiesChecker(BaseAnalyzer):
         title: Optional[str] = None,
         specification: Optional[str] = None,
         drawings_present: bool = False,
-    ) -> Dict:
+    ) -> dict:
         """
         Check all formality requirements
 
@@ -105,7 +105,7 @@ class FormalitiesChecker(BaseAnalyzer):
         """
         self.issues = []
 
-        results: Dict[str, Any] = {
+        results: dict[str, Any] = {
             "abstract": None,
             "title": None,
             "drawings": None,
@@ -129,7 +129,7 @@ class FormalitiesChecker(BaseAnalyzer):
             "overall_compliant": len([i for i in self.issues if i.severity == "CRITICAL"]) == 0,
         }
 
-    def _check_abstract(self, abstract: str) -> Dict:
+    def _check_abstract(self, abstract: str) -> dict:
         """Check abstract compliance with MPEP 608.01(b)"""
         # Remove leading/trailing whitespace
         abstract = abstract.strip()
@@ -232,7 +232,7 @@ class FormalitiesChecker(BaseAnalyzer):
 
         return result
 
-    def _check_title(self, title: str) -> Dict:
+    def _check_title(self, title: str) -> dict:
         """Check title compliance with 37 CFR 1.72(a)"""
         title = title.strip()
 
@@ -311,7 +311,7 @@ class FormalitiesChecker(BaseAnalyzer):
 
         return result
 
-    def _check_specification_sections(self, specification: str) -> Dict:
+    def _check_specification_sections(self, specification: str) -> dict:
         """Check for required specification sections per 37 CFR 1.77"""
         required_sections = {
             "BACKGROUND": r"(?i)BACKGROUND(?:\s+OF)?(?:\s+THE)?(?:\s+INVENTION)?",
@@ -352,7 +352,7 @@ class FormalitiesChecker(BaseAnalyzer):
 
         return result
 
-    def _check_drawing_references(self, specification: str, drawings_present: bool) -> Dict:
+    def _check_drawing_references(self, specification: str, drawings_present: bool) -> dict:
         """Check drawing references and compliance"""
 
         # Extract figure references from specification
@@ -363,7 +363,7 @@ class FormalitiesChecker(BaseAnalyzer):
         referenced_figures = set(fig_pattern.findall(specification))
 
         result = {
-            "figures_referenced": sorted(list(referenced_figures)),
+            "figures_referenced": sorted(referenced_figures),
             "figure_count": len(referenced_figures),
             "drawings_provided": drawings_present,
             "compliant": True,
@@ -404,16 +404,14 @@ class FormalitiesChecker(BaseAnalyzer):
 
         return result
 
-    def _generate_compliance_summary(self, results: Dict) -> Dict:
+    def _generate_compliance_summary(self, results: dict) -> dict:
         """Generate overall compliance summary"""
-        total_checks = 0
         passed_checks = 0
         critical_issues = 0
         warnings = 0
         info = 0
 
-        for issue in self.issues:
-            total_checks += 1
+        for _total_checks, issue in enumerate(self.issues, 1):
             if issue.severity == "CRITICAL":
                 critical_issues += 1
             elif issue.severity == "WARNING":

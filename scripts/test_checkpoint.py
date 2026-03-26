@@ -39,7 +39,7 @@ def test_checkpoint_basic():
         # Read and display checkpoint info
         import json
 
-        with open(checkpoint_metadata) as f:
+        with checkpoint_metadata.open() as f:
             metadata = json.load(f)
 
         print("  Checkpoint details:")

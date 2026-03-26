@@ -8,7 +8,7 @@ Extracted from server.py to work as a standalone library
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 # PDF processing
 try:
@@ -178,7 +178,7 @@ class MPEPIndex:
         self.metadata_file = INDEX_DIR / "mpep_metadata.json"
         self.bm25_file = INDEX_DIR / "mpep_bm25.json"
 
-    def extract_text_from_pdf(self, pdf_path: Path) -> List[Dict[str, Any]]:
+    def extract_text_from_pdf(self, pdf_path: Path) -> list[dict[str, Any]]:
         """Extract text from PDF with contextual metadata"""
         chunks = []
         doc = None
@@ -227,11 +227,11 @@ class MPEPIndex:
         self,
         text: str,
         section_label: str,
-        base_metadata: Dict[str, Any],
+        base_metadata: dict[str, Any],
         chunk_size: int = 500,
         overlap: int = 100,
         min_chunk_length: int = 50,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Common helper to chunk text and attach metadata with cross-reference detection.
 
@@ -277,7 +277,7 @@ class MPEPIndex:
 
         return chunks
 
-    def extract_text_from_usc(self, pdf_path: Path) -> List[Dict[str, Any]]:
+    def extract_text_from_usc(self, pdf_path: Path) -> list[dict[str, Any]]:
         """Extract text from 35 USC PDF with statute section detection"""
         import re
 
@@ -325,7 +325,7 @@ class MPEPIndex:
                 doc.close()
         return chunks
 
-    def extract_text_from_cfr(self, pdf_path: Path) -> List[Dict[str, Any]]:
+    def extract_text_from_cfr(self, pdf_path: Path) -> list[dict[str, Any]]:
         """Extract text from 37 CFR PDF with rule section detection"""
         import re
 
@@ -379,7 +379,7 @@ class MPEPIndex:
                 doc.close()
         return chunks
 
-    def extract_text_from_subsequent_pubs(self, pdf_path: Path) -> List[Dict[str, Any]]:
+    def extract_text_from_subsequent_pubs(self, pdf_path: Path) -> list[dict[str, Any]]:
         """Extract text from Subsequent Publications PDF with update tracking"""
         import re
 
@@ -506,7 +506,7 @@ class MPEPIndex:
         if not force_rebuild and self.index_file.exists() and self.metadata_file.exists():
             # Load existing index
             self.index = faiss.read_index(str(self.index_file))  # type: ignore[union-attr]
-            with open(self.metadata_file, encoding="utf-8") as f:
+            with self.metadata_file.open(encoding="utf-8") as f:
                 data = json.load(f)
                 self.chunks = data["chunks"]
                 self.metadata = data["metadata"]
@@ -519,7 +519,7 @@ class MPEPIndex:
             if BM25_AVAILABLE and BM25Okapi and self.bm25_file.exists():
                 try:
                     _log_info("Loading BM25 index from disk...")
-                    with open(self.bm25_file, encoding="utf-8") as bf:
+                    with self.bm25_file.open(encoding="utf-8") as bf:
                         tokenized = json.load(bf)
                     self.bm25 = BM25Okapi(tokenized)
                     _log_info("Hybrid search enabled")
@@ -644,13 +644,13 @@ class MPEPIndex:
             tokenized = [chunk.lower().split() for chunk in texts]
             self.bm25 = BM25Okapi(tokenized)
             # Persist tokenized corpus as JSON (avoids insecure pickle deserialization)
-            with open(self.bm25_file, "w", encoding="utf-8") as bf:
+            with self.bm25_file.open("w", encoding="utf-8") as bf:
                 json.dump(tokenized, bf)
             _log_info("Hybrid search enabled")
 
         # Save index
         faiss.write_index(self.index, str(self.index_file))  # type: ignore[union-attr]
-        with open(self.metadata_file, "w", encoding="utf-8") as f:
+        with self.metadata_file.open("w", encoding="utf-8") as f:
             json.dump({"chunks": self.chunks, "metadata": self.metadata}, f)
 
         _log_info(
@@ -671,7 +671,7 @@ class MPEPIndex:
         is_statute: Optional[bool] = None,
         is_regulation: Optional[bool] = None,
         is_update: Optional[bool] = None,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Advanced hybrid search with HyDE expansion and reranking
 
         Args:
@@ -690,10 +690,7 @@ class MPEPIndex:
             "mpep_search_started", query_length=len(query), top_k=top_k, source_filter=source_filter
         )
 
-        if retrieve_k is None:
-            retrieve_k = min(top_k * 4, 50)
-        else:
-            retrieve_k = min(retrieve_k, 100)  # Cap at 100 for performance
+        retrieve_k = min(top_k * 4, 50) if retrieve_k is None else min(retrieve_k, 100)
         candidates = {}
 
         # HyDE Query Expansion (if enabled)
@@ -802,7 +799,7 @@ class MPEPIndex:
 
         # Combine rerank scores with candidates
         final_results = []
-        for (idx, cand), rerank_score in zip(sorted_candidates, rerank_scores):
+        for (_idx, cand), rerank_score in zip(sorted_candidates, rerank_scores):
             final_results.append(
                 {
                     "text": cand["text"],

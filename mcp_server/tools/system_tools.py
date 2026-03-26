@@ -19,7 +19,7 @@ import os
 import shutil
 import sys
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 
 def register_system_tools(
@@ -42,7 +42,7 @@ def register_system_tools(
     """
 
     @mcp.tool()
-    def setup_claude_config(project_directory: str) -> Dict[str, Any]:
+    def setup_claude_config(project_directory: str) -> dict[str, Any]:
         """
         Copy .claude configuration (commands and skills) to a project directory.
 
@@ -193,6 +193,6 @@ def register_system_tools(
             "total_chunks": len(mpep_index.chunks),
             "total_metadata": len(mpep_index.metadata),
             "index_exists": mpep_index.index is not None,
-            "sections": len(set(m["section"] for m in mpep_index.metadata)),
+            "sections": len({m["section"] for m in mpep_index.metadata}),
         }
         return json.dumps(stats, indent=2)

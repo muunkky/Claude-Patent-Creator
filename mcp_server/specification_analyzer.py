@@ -7,7 +7,7 @@ Checks written description and enablement support for patent claims
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 try:
     from analyzer_base import BaseAnalyzer, BaseIssue
@@ -22,7 +22,7 @@ class SupportIssue(BaseIssue):
     issue_type: str = field(default="")  # written_description, enablement, best_mode
     claim_number: int = field(default=0)
     claim_element: str = field(default="")
-    spec_references: List[str] = field(default_factory=list)  # Paragraphs where element appears
+    spec_references: list[str] = field(default_factory=list)  # Paragraphs where element appears
     confidence: str = field(default="MEDIUM")  # Override default from BaseIssue
 
 
@@ -31,10 +31,10 @@ class SpecificationAnalyzer(BaseAnalyzer):
 
     def __init__(self):
         super().__init__()
-        self.spec_paragraphs: Dict[int, str] = {}
-        self.spec_index: Dict[str, List[int]] = defaultdict(list)  # term -> paragraph numbers
+        self.spec_paragraphs: dict[int, str] = {}
+        self.spec_index: dict[str, list[int]] = defaultdict(list)  # term -> paragraph numbers
 
-    def analyze(self, claims: List[Dict], specification: str) -> Dict[str, Any]:
+    def analyze(self, claims: list[dict], specification: str) -> dict[str, Any]:
         """
         Main analysis method - required by BaseAnalyzer
 
@@ -47,7 +47,7 @@ class SpecificationAnalyzer(BaseAnalyzer):
         """
         return self.analyze_specification_support(claims, specification)
 
-    def _issue_to_dict(self, issue: BaseIssue) -> Dict[str, Any]:
+    def _issue_to_dict(self, issue: BaseIssue) -> dict[str, Any]:
         """Convert SupportIssue to dictionary"""
         if not isinstance(issue, SupportIssue):
             # Fallback for base issues
@@ -74,7 +74,7 @@ class SpecificationAnalyzer(BaseAnalyzer):
             "confidence": issue.confidence,
         }
 
-    def analyze_specification_support(self, claims: List[Dict], specification: str) -> Dict:
+    def analyze_specification_support(self, claims: list[dict], specification: str) -> dict:
         """
         Analyze whether specification provides adequate support for claims
 
@@ -172,7 +172,7 @@ class SpecificationAnalyzer(BaseAnalyzer):
 
             para_num += 1
 
-    def _extract_technical_terms(self, text: str) -> List[str]:
+    def _extract_technical_terms(self, text: str) -> list[str]:
         """Extract technical terms from text for indexing"""
         # Remove common words
         stopwords = {
@@ -248,7 +248,7 @@ class SpecificationAnalyzer(BaseAnalyzer):
 
         return terms
 
-    def _check_claim_support(self, claim: Dict):
+    def _check_claim_support(self, claim: dict):
         """Check if specification adequately supports a claim"""
         claim_num = claim["number"]
         claim_text = claim["text"]
@@ -293,7 +293,7 @@ class SpecificationAnalyzer(BaseAnalyzer):
         # Check for enablement (high-level check)
         self._check_enablement(claim)
 
-    def _extract_claim_elements(self, claim_text: str) -> List[str]:
+    def _extract_claim_elements(self, claim_text: str) -> list[str]:
         """Extract key claim elements to verify in specification"""
         elements = []
 
@@ -337,7 +337,7 @@ class SpecificationAnalyzer(BaseAnalyzer):
 
         return elements
 
-    def _find_specification_support(self, element: str) -> List[int]:
+    def _find_specification_support(self, element: str) -> list[int]:
         """Find paragraphs in specification that support claim element"""
         element_lower = element.lower()
 
@@ -365,9 +365,9 @@ class SpecificationAnalyzer(BaseAnalyzer):
                     if matches >= min(2, len(significant_words)):
                         matching_paras.add(para_num)
 
-        return sorted(list(matching_paras))
+        return sorted(matching_paras)
 
-    def _check_enablement(self, claim: Dict):
+    def _check_enablement(self, claim: dict):
         """Check for potential enablement issues (high-level)"""
         claim_num = claim["number"]
         claim_text = claim["text"]
@@ -406,7 +406,7 @@ class SpecificationAnalyzer(BaseAnalyzer):
                             )
                         )
 
-    def _generate_report(self, claims: List[Dict], warnings: Optional[List[Dict]] = None) -> Dict:
+    def _generate_report(self, claims: list[dict], warnings: Optional[list[dict]] = None) -> dict:
         """Generate specification support analysis report with input validation warnings"""
 
         if warnings is None:
@@ -439,14 +439,14 @@ class SpecificationAnalyzer(BaseAnalyzer):
             "spec_coverage": self._calculate_coverage(claims),
         }
 
-    def _calculate_coverage(self, claims: List[Dict]) -> Dict:
+    def _calculate_coverage(self, claims: list[dict]) -> dict:
         """Calculate what percentage of independent claims have specification support"""
         independent_claims = [c for c in claims if c["is_independent"]]
         if not independent_claims:
             return {"percentage": 0, "supported_claims": 0, "total_claims": 0}
 
         # Count independent claims with no critical issues
-        claims_with_critical = set(i.claim_number for i in self.issues if isinstance(i, SupportIssue) and i.severity == "CRITICAL")  # type: ignore[attr-defined]
+        claims_with_critical = {i.claim_number for i in self.issues if isinstance(i, SupportIssue) and i.severity == "CRITICAL"}  # type: ignore[attr-defined]
         supported_claims = len(independent_claims) - len(claims_with_critical)
 
         return {
@@ -456,7 +456,7 @@ class SpecificationAnalyzer(BaseAnalyzer):
             "unsupported_claims": list(claims_with_critical),
         }
 
-    def _generate_spec_summary(self, critical: int, important: int, warnings: List[Dict]) -> str:
+    def _generate_spec_summary(self, critical: int, important: int, warnings: list[dict]) -> str:
         """Generate human-readable summary including input warnings"""
         if critical == 0 and important == 0 and len(warnings) == 0:
             return "[OK] Specification provides adequate support for all claims"

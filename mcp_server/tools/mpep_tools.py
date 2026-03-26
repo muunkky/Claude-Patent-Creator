@@ -13,7 +13,7 @@ Dependencies:
     - Logging and monitoring from logging_config.py and monitoring.py
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 
 def register_mpep_tools(
@@ -53,7 +53,7 @@ def register_mpep_tools(
         is_statute: Optional[bool] = None,
         is_regulation: Optional[bool] = None,
         is_update: Optional[bool] = None,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search USPTO MPEP manual for relevant information.
 
         Hybrid search (FAISS + BM25) with optional filters for source type (MPEP/35_USC/37_CFR/SUBSEQUENT),
@@ -131,7 +131,7 @@ def register_mpep_tools(
         return formatted_results
 
     @mcp.tool()
-    def get_mpep_section(section_number: str, max_chunks: int = 50) -> Dict[str, Any]:
+    def get_mpep_section(section_number: str, max_chunks: int = 50) -> dict[str, Any]:
         """Get all text chunks from a specific MPEP section number (e.g., "2100", "700", "608")."""
         # Find all chunks from the specified section
         section_pattern = f"MPEP {section_number}"

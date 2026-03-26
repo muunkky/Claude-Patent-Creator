@@ -14,7 +14,7 @@ import site
 import sys
 import zipfile
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Any
 
 # macOS Apple Silicon: prevent FAISS OpenMP segfault (must precede torch/faiss imports)
 # See: https://github.com/RobThePCGuy/Claude-Patent-Creator/issues/1
@@ -114,10 +114,7 @@ except ImportError:
 mcp = FastMCP("claude-patent-creator")
 
 # Initialize logger
-if BEST_PRACTICES_AVAILABLE:
-    logger = get_logger()  # type: ignore[misc]
-else:
-    logger = None
+logger = get_logger() if BEST_PRACTICES_AVAILABLE else None  # type: ignore[misc]
 
 # Global variables
 MPEP_DIR = Path(__file__).parent.parent / "pdfs"
@@ -292,7 +289,7 @@ def download_subsequent_publications(dest_dir: Path = MPEP_DIR) -> bool:
     )
 
 
-def check_all_sources(dest_dir: Path = MPEP_DIR) -> Dict[str, bool]:
+def check_all_sources(dest_dir: Path = MPEP_DIR) -> dict[str, bool]:
     """Check which source documents are available"""
     return {
         "mpep": check_mpep_pdfs(dest_dir) > 0,
@@ -554,7 +551,7 @@ def _run_health_checks():
 def _auto_copy_claude_config():
     """Automatically copy .claude config to current working directory if not present"""
     try:
-        cwd = Path(os.getcwd()).resolve()
+        cwd = Path.cwd().resolve()
         dest_claude = cwd / ".claude"
         server_root = Path(__file__).parent.resolve()
         source_claude = server_root / ".claude"

@@ -7,10 +7,10 @@ Renders technical diagrams from DOT code with patent-style annotations
 import os
 import re
 from pathlib import Path
+from typing import Any, Optional
 
 # Use defusedxml for secure XML parsing (prevents XML bombs and XXE attacks)
 from defusedxml import ElementTree as ET
-from typing import Any, Dict, List, Optional, Tuple
 
 try:
     import graphviz
@@ -105,7 +105,7 @@ class PatentDiagramGenerator:
 
     def create_flowchart(
         self,
-        steps: List[Dict[str, str]],
+        steps: list[dict[str, str]],
         filename: str = "flowchart",
         output_format: str = "svg",
     ) -> Path:
@@ -164,8 +164,8 @@ class PatentDiagramGenerator:
 
     def create_block_diagram(
         self,
-        blocks: List[Dict[str, Any]],
-        connections: List[Tuple[str, str, Optional[str]]],
+        blocks: list[dict[str, Any]],
+        connections: list[tuple[str, str, Optional[str]]],
         filename: str = "block_diagram",
         output_format: str = "svg",
     ) -> Path:
@@ -238,7 +238,7 @@ class PatentDiagramGenerator:
 
         return self.render_dot_diagram(dot_code, filename, output_format)
 
-    def add_reference_numbers(self, svg_path: Path, reference_map: Dict[str, int]) -> Path:
+    def add_reference_numbers(self, svg_path: Path, reference_map: dict[str, int]) -> Path:
         """
         Add patent-style reference numbers to an SVG diagram
 
@@ -298,7 +298,7 @@ class PatentDiagramGenerator:
 
         return output_path
 
-    def get_templates(self) -> Dict[str, str]:
+    def get_templates(self) -> dict[str, str]:
         """
         Get common patent diagram templates
 
@@ -387,7 +387,7 @@ digraph ComponentHierarchy {
         return templates
 
 
-def check_graphviz_installed() -> Dict[str, Any]:
+def check_graphviz_installed() -> dict[str, Any]:
     """Check if Graphviz is installed and available"""
     if GraphvizInstaller:
         installer = GraphvizInstaller()
@@ -397,7 +397,7 @@ def check_graphviz_installed() -> Dict[str, Any]:
         return status
 
     # Fallback if installer not available
-    status: Dict[str, Any] = {
+    status: dict[str, Any] = {
         "python_package": graphviz is not None,
         "system_command": False,
         "version": None,

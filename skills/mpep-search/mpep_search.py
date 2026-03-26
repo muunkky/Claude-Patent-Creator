@@ -5,7 +5,7 @@ Provides search and retrieval operations for USPTO MPEP, 35 USC, 37 CFR, and upd
 
 import sys
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 # Add mcp_server to path for imports
 PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
@@ -51,7 +51,7 @@ def search_mpep(
     is_statute: Optional[bool] = None,
     is_regulation: Optional[bool] = None,
     is_update: Optional[bool] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Search the MPEP corpus using hybrid RAG (vector + keyword + reranking).
 
@@ -161,7 +161,7 @@ def search_mpep(
 def get_mpep_section(
     section_number: str,
     max_chunks: int = 50,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Get all text chunks from a specific MPEP section by number.
 
@@ -226,7 +226,7 @@ def get_mpep_section(
         return {"success": False, "error": f"Section retrieval failed: {str(e)}"}
 
 
-def check_index_status() -> Dict[str, Any]:
+def check_index_status() -> dict[str, Any]:
     """
     Check if the MPEP index is available and ready to use.
 

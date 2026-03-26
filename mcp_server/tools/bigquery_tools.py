@@ -16,7 +16,7 @@ Dependencies:
     - Logging and monitoring from logging_config.py and monitoring.py
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 
 def register_bigquery_tools(
@@ -70,7 +70,7 @@ def register_bigquery_tools(
         return bigquery_searcher
 
     @mcp.tool()
-    def check_bigquery_status() -> Dict[str, Any]:
+    def check_bigquery_status() -> dict[str, Any]:
         """Check if Google BigQuery patent search is available and configured."""
         log_info("check_bigquery_status called")
         try:
@@ -102,7 +102,7 @@ def register_bigquery_tools(
         country: str = "US",
         start_year: Optional[int] = None,
         end_year: Optional[int] = None,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Search patents using Google BigQuery (fast, cloud-based, 76M+ patents).
 
@@ -170,7 +170,7 @@ def register_bigquery_tools(
 
     @mcp.tool()
     @track_performance("tool_get_patent_bigquery") if BEST_PRACTICES_AVAILABLE else lambda f: f
-    def get_patent_bigquery(patent_number: str) -> Dict[str, Any]:
+    def get_patent_bigquery(patent_number: str) -> dict[str, Any]:
         """
         Get full patent details from BigQuery by publication number.
 
@@ -214,7 +214,7 @@ def register_bigquery_tools(
     )
     def search_patents_by_cpc_bigquery(
         cpc_code: str, limit: int = 20, country: str = "US"
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Search patents by CPC classification code using BigQuery.
 

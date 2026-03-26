@@ -112,11 +112,20 @@ ignore = [
     "E501",  # Line too long (handled by black)
     "B008",  # Do not perform function calls in argument defaults
     "B904",  # Use raise from within except
+    "N803",  # Argument name should be lowercase (dependency injection pattern uses class names)
+    "N817",  # CamelCase imported as acronym (ElementTree as ET is standard convention)
+    "SIM112",  # Use capitalized environment variable (Windows env vars are correctly cased)
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]  # Unused imports in __init__.py
 "test_*.py" = ["ARG"]     # Unused function arguments in tests
+"mcp_server/cli.py" = ["ARG001", "E402"]  # CLI handlers must accept args; sys.path manipulation before imports
+"mcp_server/server.py" = ["ARG001"]  # Dependency injection parameters
+"mcp_server/validation.py" = ["N802", "ARG001"]  # Field() shim matching Pydantic API; fallback stubs
+"mcp_server/tools/*.py" = ["ARG001"]  # Dependency injection parameters for tool registration
+"mcp_server/uspto_api.py" = ["ARG001"]  # Fallback decorator parameter
+"skills/prior-art-search/prior_art_types.py" = ["ARG001"]  # Not-yet-implemented function stubs
 
 [tool.isort]
 profile = "black"

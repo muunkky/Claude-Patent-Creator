@@ -11,7 +11,7 @@ import sys
 from collections.abc import MutableMapping
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional, Tuple
+from typing import Any, Optional
 
 
 class StructuredFormatter(logging.Formatter):
@@ -88,7 +88,7 @@ class StructuredLogger(logging.LoggerAdapter):
 
     def process(
         self, msg: str, kwargs: MutableMapping[str, Any]
-    ) -> Tuple[str, MutableMapping[str, Any]]:
+    ) -> tuple[str, MutableMapping[str, Any]]:
         """Process log message and add extra data."""
         # Extract extra data from kwargs
         extra_data = kwargs.pop("extra", {})
@@ -123,10 +123,7 @@ def setup_logging(
     logger.handlers.clear()
 
     # Choose formatter
-    if format_type == "json":
-        formatter = StructuredFormatter()
-    else:
-        formatter = HumanReadableFormatter()
+    formatter = StructuredFormatter() if format_type == "json" else HumanReadableFormatter()
 
     # Create stderr handler (required for MCP protocol)
     stderr_handler = logging.StreamHandler(sys.stderr)

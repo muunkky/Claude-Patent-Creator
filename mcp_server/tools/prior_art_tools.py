@@ -15,7 +15,7 @@ Dependencies:
     - Logging and monitoring from logging_config.py and monitoring.py
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 
 def register_prior_art_tools(
@@ -69,7 +69,7 @@ def register_prior_art_tools(
         retrieve_k: Optional[int] = None,
         cpc_filter: Optional[str] = None,
         years_back: Optional[int] = None,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search local patent corpus for prior art. Supports CPC code filters (e.g., "G06F") and year range limits."""
         try:
             index = _ensure_patent_index()
@@ -101,7 +101,7 @@ def register_prior_art_tools(
 
     @mcp.tool()
     @track_performance("tool_get_patent_details") if BEST_PRACTICES_AVAILABLE else lambda f: f
-    def get_patent_details(patent_id: str) -> Dict[str, Any]:
+    def get_patent_details(patent_id: str) -> dict[str, Any]:
         """Get complete patent information with all text chunks by patent number (e.g., "10123456" or "US10123456")."""
         try:
             index = _ensure_patent_index()
@@ -144,7 +144,7 @@ def register_prior_art_tools(
         if BEST_PRACTICES_AVAILABLE
         else lambda f: f
     )
-    def check_patent_corpus_status() -> Dict[str, Any]:
+    def check_patent_corpus_status() -> dict[str, Any]:
         """Check status of patent corpus download and search index."""
         try:
             from patent_corpus import check_patent_corpus_status as check_status

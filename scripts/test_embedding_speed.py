@@ -43,7 +43,7 @@ def test_embedding_speed():
 
     # Test different batch sizes
     batch_sizes = [32, 64, 128, 256, 512] if device == "cuda" else [16, 32, 64]
-    
+
     speed = 0.0
 
     for batch_size in batch_sizes:

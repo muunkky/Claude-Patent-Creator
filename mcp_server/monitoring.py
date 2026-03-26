@@ -32,7 +32,7 @@ import functools
 import threading
 import time
 from collections import defaultdict
-from typing import Any, Callable, Dict
+from typing import Any, Callable
 
 try:
     from logging_config import get_logger
@@ -66,7 +66,7 @@ class PerformanceMetrics:
             error_key = f"{operation}:{error_type}"
             self._error_counts[error_key] += 1
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get current performance statistics."""
         with self._lock:
             stats = {
@@ -139,7 +139,7 @@ def track_performance(operation_name: str, log_params: bool = True):
             start_time = time.perf_counter()
 
             # Prepare log context
-            log_context: Dict[str, Any] = {
+            log_context: dict[str, Any] = {
                 "operation": operation_name,
                 "function": func.__name__,
             }
@@ -213,7 +213,7 @@ def track_async_performance(operation_name: str, log_params: bool = True):
         async def wrapper(*args, **kwargs) -> Any:
             start_time = time.perf_counter()
 
-            log_context: Dict[str, Any] = {
+            log_context: dict[str, Any] = {
                 "operation": operation_name,
                 "function": func.__name__,
             }

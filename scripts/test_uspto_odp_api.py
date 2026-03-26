@@ -12,13 +12,13 @@ This script tests various potential endpoint structures to find the working one.
 
 import json
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import requests
 
 
 def test_endpoint(
-    base_url: str, endpoint: str, api_key: Optional[str], payload: Dict[str, Any], description: str
+    base_url: str, endpoint: str, api_key: Optional[str], payload: dict[str, Any], description: str
 ) -> None:
     """Test a specific endpoint configuration"""
 

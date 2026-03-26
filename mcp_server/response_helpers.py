@@ -16,10 +16,10 @@ Usage:
             return error_response(e, {"param": param})
 """
 
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 
-def success_response(data: Any = None, message: str = "", **extra_fields: Any) -> Dict[str, Any]:
+def success_response(data: Any = None, message: str = "", **extra_fields: Any) -> dict[str, Any]:
     """Create a standardized success response for MCP tools.
 
     Args:
@@ -56,9 +56,9 @@ def success_response(data: Any = None, message: str = "", **extra_fields: Any) -
 
 def error_response(
     error: Union[Exception, str],
-    context: Optional[Dict[str, Any]] = None,
+    context: Optional[dict[str, Any]] = None,
     error_type: Optional[str] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Create a standardized error response for MCP tools.
 
     Args:
@@ -99,7 +99,7 @@ def error_response(
 
 def partial_success_response(
     data: Any, warnings: list[str], message: str = "", **extra_fields: Any
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Create a response for operations that partially succeeded.
 
     Use when an operation completes but with warnings or partial failures.
@@ -129,7 +129,7 @@ def partial_success_response(
     return response
 
 
-def validation_error_response(field: str, issue: str, value: Any = None) -> Dict[str, Any]:
+def validation_error_response(field: str, issue: str, value: Any = None) -> dict[str, Any]:
     """Create a response for validation errors.
 
     Args:
@@ -163,7 +163,7 @@ def validation_error_response(field: str, issue: str, value: Any = None) -> Dict
     return response
 
 
-def not_found_response(resource_type: str, identifier: Any, suggestion: str = "") -> Dict[str, Any]:
+def not_found_response(resource_type: str, identifier: Any, suggestion: str = "") -> dict[str, Any]:
     """Create a response for resource not found errors.
 
     Args:
