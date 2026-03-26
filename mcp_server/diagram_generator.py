@@ -9,12 +9,7 @@ import re
 from pathlib import Path
 
 # Use defusedxml for secure XML parsing (prevents XML bombs and XXE attacks)
-try:
-    from defusedxml import ElementTree as ET
-except ImportError:
-    # Fallback to standard library if defusedxml not available
-    # Note: This is less secure and should only be used for trusted, locally-generated files
-    from xml.etree import ElementTree as ET
+from defusedxml import ElementTree as ET
 from typing import Any, Dict, List, Optional, Tuple
 
 try:
@@ -277,6 +272,9 @@ class PatentDiagramGenerator:
         # SVG namespace
         ns = {"svg": "http://www.w3.org/2000/svg"}
 
+        if root is None:
+            return svg_path
+
         # Find text elements and add reference numbers
         for text_elem in root.findall(".//svg:text", ns):
             text_content = "".join(text_elem.itertext()).strip()
@@ -399,7 +397,7 @@ def check_graphviz_installed() -> Dict[str, Any]:
         return status
 
     # Fallback if installer not available
-    status = {
+    status: Dict[str, Any] = {
         "python_package": graphviz is not None,
         "system_command": False,
         "version": None,

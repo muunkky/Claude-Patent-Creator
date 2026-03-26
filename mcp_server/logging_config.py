@@ -5,13 +5,13 @@ All logs go to stderr to maintain MCP protocol compliance (stdout is reserved fo
 Uses JSON formatting for production observability and log aggregation.
 """
 
-import logging
 import json
+import logging
 import sys
+from collections.abc import MutableMapping
 from datetime import datetime
-from typing import Optional
 from pathlib import Path
-from typing import MutableMapping, Any, Tuple
+from typing import Any, Optional, Tuple
 
 
 class StructuredFormatter(logging.Formatter):

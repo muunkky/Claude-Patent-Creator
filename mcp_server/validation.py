@@ -6,15 +6,15 @@ Provides type-safe validation with clear error messages.
 
 # pyright: reportCallInDefaultInitializer=false
 
-from typing import Optional, Literal, Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Literal, Optional
 
 if TYPE_CHECKING:
-    from pydantic import BaseModel, Field, field_validator, conint, constr
+    from pydantic import BaseModel, Field, conint, constr, field_validator
 
     PYDANTIC_AVAILABLE = True
 else:
     try:
-        from pydantic import BaseModel, Field, field_validator, conint, constr
+        from pydantic import BaseModel, Field, conint, constr, field_validator
 
         PYDANTIC_AVAILABLE = True
     except ImportError:

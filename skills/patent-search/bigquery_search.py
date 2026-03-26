@@ -2,8 +2,8 @@
 """
 Direct BigQuery Patent Search - Bypasses MCP layer issues
 """
-import sys
 import json
+import sys
 from pathlib import Path
 
 # Add parent directory to path to import from mcp_server

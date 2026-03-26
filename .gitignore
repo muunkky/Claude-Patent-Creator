@@ -61,3 +61,5 @@ htmlcov/
 .env
 .env.local
 NUL
+pyright_out*.txt
+ruff_out*.txt

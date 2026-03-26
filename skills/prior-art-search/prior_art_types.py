@@ -20,7 +20,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 # Import BigQuery search module
 try:
-    from mcp_server.bigquery_search import BigQueryPatentSearch, BIGQUERY_AVAILABLE
+    from mcp_server.bigquery_search import BIGQUERY_AVAILABLE, BigQueryPatentSearch
 except ImportError:
     BigQueryPatentSearch = None
     BIGQUERY_AVAILABLE = False

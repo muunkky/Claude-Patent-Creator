@@ -21,6 +21,11 @@ if _pkg_dir not in sys.path:
     sys.path.insert(0, _pkg_dir)
 
 # Import patent corpus management
+# Import hardware detection for PyTorch installation
+from hardware_detect import (
+    check_pytorch_installation,
+    get_pytorch_install_command,
+)
 from patent_corpus import (
     PATENT_INDEX_DIR,
     PatentCorpusDownloader,
@@ -34,6 +39,7 @@ from server import (
     MPEP_DIR,
     MPEP_DOWNLOAD_URL,
     MPEPIndex,
+    _auto_copy_claude_config,
     check_all_sources,
     check_mpep_pdfs,
     download_35_usc,
@@ -42,13 +48,6 @@ from server import (
     download_subsequent_publications,
     extract_mpep_pdfs,
     mcp,
-    _auto_copy_claude_config,
-)
-
-# Import hardware detection for PyTorch installation
-from hardware_detect import (
-    check_pytorch_installation,
-    get_pytorch_install_command,
 )
 
 # Import path utilities for cross-platform path handling
@@ -534,21 +533,25 @@ def run_server(args):
         )
         return 1
 
-    print("Initializing MPEP index...", file=sys.stderr)
-
-    global mpep_index
-    use_hyde = not args.no_hyde
-    mpep_index = MPEPIndex(use_hyde=use_hyde)
-    mpep_index.build_index(force_rebuild=False)
-
     # Auto-copy .claude configuration to current working directory
     _auto_copy_claude_config()
 
     print("Starting MCP server...", file=sys.stderr)
-    mcp.run()
-
-    return 0
-
+    
+    # Run the server.py script as a subprocess to ensure clean initialization
+    # and proper tool registration exactly like 'claude mcp add' does
+    server_script = Path(__file__).parent / "server.py"
+    cmd = [sys.executable, str(server_script)]
+    
+    env = os.environ.copy()
+    if args.no_hyde:
+        env["PATENT_MPEP_USE_HYDE"] = "false"
+        
+    try:
+        result = subprocess.run(cmd, env=env)
+        return result.returncode
+    except KeyboardInterrupt:
+        return 0
 
 def status_command(args):
     """
@@ -593,7 +596,7 @@ def status_command(args):
         if metadata_file.exists():
             import json
 
-            with open(metadata_file, "r", encoding="utf-8") as f:
+            with open(metadata_file, encoding="utf-8") as f:
                 data = json.load(f)
                 print(f"  Chunks:    {len(data['chunks']):,}", file=sys.stderr)
                 print(
@@ -745,7 +748,7 @@ def patents_status_command(args):
     if index_exists:
         metadata_file = PATENT_INDEX_DIR / "patent_metadata.json"
         if metadata_file.exists():
-            with open(metadata_file, "r", encoding="utf-8") as f:
+            with open(metadata_file, encoding="utf-8") as f:
                 data = json.load(f)
                 num_chunks = len(data["chunks"])
                 num_patents = len(set(m["patent_id"] for m in data["metadata"]))
@@ -816,7 +819,7 @@ def verify_config_command(args):
         return 1
 
     try:
-        with open(config_path, "r", encoding="utf-8") as f:
+        with open(config_path, encoding="utf-8") as f:
             config = json.load(f)
 
         if "mcpServers" not in config:

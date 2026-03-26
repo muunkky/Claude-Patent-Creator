@@ -206,11 +206,12 @@ def register_diagram_tools(
             ]
         """
         try:
+            from typing import Tuple
+
             from diagram_generator import (
                 PatentDiagramGenerator,
                 check_graphviz_installed,
             )
-            from typing import Tuple
 
             status = check_graphviz_installed()
             if not status["ready"]:

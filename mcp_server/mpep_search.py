@@ -77,7 +77,7 @@ except ImportError:
 # Import logging and monitoring with fallback
 try:
     from logging_config import get_logger
-    from monitoring import track_performance, log_operation_result
+    from monitoring import log_operation_result, track_performance
 
     logger = get_logger()
     LOGGING_AVAILABLE = True
@@ -506,7 +506,7 @@ class MPEPIndex:
         if not force_rebuild and self.index_file.exists() and self.metadata_file.exists():
             # Load existing index
             self.index = faiss.read_index(str(self.index_file))  # type: ignore[union-attr]
-            with open(self.metadata_file, "r", encoding="utf-8") as f:
+            with open(self.metadata_file, encoding="utf-8") as f:
                 data = json.load(f)
                 self.chunks = data["chunks"]
                 self.metadata = data["metadata"]
@@ -519,7 +519,7 @@ class MPEPIndex:
             if BM25_AVAILABLE and BM25Okapi and self.bm25_file.exists():
                 try:
                     _log_info("Loading BM25 index from disk...")
-                    with open(self.bm25_file, "r", encoding="utf-8") as bf:
+                    with open(self.bm25_file, encoding="utf-8") as bf:
                         tokenized = json.load(bf)
                     self.bm25 = BM25Okapi(tokenized)
                     _log_info("Hybrid search enabled")

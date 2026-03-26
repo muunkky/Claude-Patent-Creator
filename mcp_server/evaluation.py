@@ -97,7 +97,7 @@ class MPEPEvaluator:
     def load_test_dataset(self) -> List[Dict[str, Any]]:
         """Load existing test dataset or create new one"""
         if self.test_dataset_file.exists():
-            with open(self.test_dataset_file, "r", encoding="utf-8") as f:
+            with open(self.test_dataset_file, encoding="utf-8") as f:
                 return json.load(f)
         return self.create_test_dataset()
 
@@ -187,9 +187,9 @@ class MPEPEvaluator:
 
     def compare_evaluations(self, baseline_file: str, current_file: str) -> Dict[str, Any]:
         """Compare two evaluation runs to measure improvement"""
-        with open(baseline_file, "r") as f:
+        with open(baseline_file) as f:
             baseline = json.load(f)
-        with open(current_file, "r") as f:
+        with open(current_file) as f:
             current = json.load(f)
 
         comparison = {

@@ -29,7 +29,7 @@ def test_bigquery_initialization():
     """Test BigQuery client initialization with logging."""
     print("\nTesting BigQuery initialization...")
 
-    from mcp_server.bigquery_search import BigQueryPatentSearch, BIGQUERY_AVAILABLE
+    from mcp_server.bigquery_search import BIGQUERY_AVAILABLE, BigQueryPatentSearch
 
     if not BIGQUERY_AVAILABLE:
         print("  [WARN] BigQuery not available (dependencies not installed)")

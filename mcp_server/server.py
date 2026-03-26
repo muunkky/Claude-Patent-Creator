@@ -48,19 +48,19 @@ except ImportError:
 # Import best practice modules
 try:
     from logging_config import get_logger
-    from monitoring import track_performance, log_operation_result
+    from monitoring import log_operation_result, track_performance
     from validation import (
-        SearchMPEPInput,
-        SearchBigQueryInput,
-        SearchUSPTOInput,
-        GetPatentInput,
+        PYDANTIC_AVAILABLE,
+        CheckFormalitiesInput,
         CPCSearchInput,
+        GetPatentInput,
+        RenderDiagramInput,
         ReviewClaimsInput,
         ReviewSpecificationInput,
-        CheckFormalitiesInput,
-        RenderDiagramInput,
+        SearchBigQueryInput,
+        SearchMPEPInput,
+        SearchUSPTOInput,
         validate_input,
-        PYDANTIC_AVAILABLE,
     )
 
     BEST_PRACTICES_AVAILABLE = True
@@ -123,7 +123,7 @@ else:
 MPEP_DIR = Path(__file__).parent.parent / "pdfs"
 INDEX_DIR = Path(__file__).parent / "index"
 patent_corpus_index = None
-mpep_index: Optional[MPEPIndex] = None
+mpep_index: Any = None
 
 # Ensure directories exist
 MPEP_DIR.mkdir(parents=True, exist_ok=True)
@@ -307,13 +307,14 @@ def check_all_sources(dest_dir: Path = MPEP_DIR) -> Dict[str, bool]:
 # ============================================================================
 
 # Import tool registration functions
-from tools.mpep_tools import register_mpep_tools  # noqa: E402
 from tools.analyzer_tools import register_analyzer_tools  # noqa: E402
-from tools.uspto_search_tools import register_uspto_tools  # noqa: E402
 from tools.bigquery_tools import register_bigquery_tools  # noqa: E402
-from tools.prior_art_tools import register_prior_art_tools  # noqa: E402
 from tools.diagram_tools import register_diagram_tools  # noqa: E402
+from tools.mpep_tools import register_mpep_tools  # noqa: E402
+from tools.prior_art_tools import register_prior_art_tools  # noqa: E402
 from tools.system_tools import register_system_tools  # noqa: E402
+from tools.uspto_search_tools import register_uspto_tools  # noqa: E402
+
 
 def _register_all_tools():
     """Register all MCP tools with the current mpep_index (eager or lazy)."""

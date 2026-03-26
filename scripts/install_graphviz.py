@@ -13,7 +13,7 @@ mcp_server_path = project_root / "mcp_server"
 sys.path.insert(0, str(mcp_server_path))
 
 try:
-    from graphviz_installer import GraphvizInstaller  # noqa: E402
+    from graphviz_installer import GraphvizInstaller  # type: ignore # noqa: E402
 except ImportError:
     print(f"Error: Could not find graphviz_installer module in {mcp_server_path}")
     print("Please ensure the module exists in the mcp_server directory.")

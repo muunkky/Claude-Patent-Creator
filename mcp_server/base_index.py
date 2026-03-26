@@ -172,7 +172,7 @@ class HybridRAGIndex(ABC):
             self.index = faiss.read_index(str(files["faiss"]))
 
             # Load metadata
-            with open(files["metadata"], "r") as f:
+            with open(files["metadata"]) as f:
                 self.metadata = json.load(f)
 
             # Rebuild chunks from metadata

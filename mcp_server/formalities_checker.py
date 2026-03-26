@@ -5,13 +5,13 @@ Automated checking of MPEP 608 formality requirements
 """
 
 import re
-from typing import Dict, Optional, Any
 from dataclasses import dataclass, field
+from typing import Any, Dict, Optional
 
 try:
-    from analyzer_base import BaseIssue, BaseAnalyzer
+    from analyzer_base import BaseAnalyzer, BaseIssue
 except ImportError:
-    from mcp_server.analyzer_base import BaseIssue, BaseAnalyzer
+    from mcp_server.analyzer_base import BaseAnalyzer, BaseIssue
 
 
 @dataclass

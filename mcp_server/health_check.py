@@ -113,13 +113,14 @@ class SystemHealthChecker:
 
         # Check index integrity
         try:
-            import faiss
             import json
+
+            import faiss
 
             index = faiss.read_index(str(index_file))
             chunk_count = index.ntotal
 
-            with open(metadata_file, "r", encoding="utf-8") as f:
+            with open(metadata_file, encoding="utf-8") as f:
                 metadata = json.load(f)
 
             result = {
@@ -486,7 +487,7 @@ class SystemHealthChecker:
         }
 
         try:
-            from sentence_transformers import SentenceTransformer, CrossEncoder
+            from sentence_transformers import CrossEncoder, SentenceTransformer
 
             # Test embeddings model
             try:

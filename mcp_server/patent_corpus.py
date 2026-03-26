@@ -179,7 +179,7 @@ class PatentTSVParser:
         """Load a TSV file into a key-value dictionary"""
         result = {}
         try:
-            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+            with open(file_path, encoding="utf-8", errors="ignore") as f:
                 reader = csv.DictReader(f, delimiter="\t", quoting=csv.QUOTE_MINIMAL)
                 for row in reader:
                     key = row.get(key_col, "").strip()
@@ -200,7 +200,7 @@ class PatentTSVParser:
         """Load a TSV file with multiple rows per key"""
         result = {}
         try:
-            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+            with open(file_path, encoding="utf-8", errors="ignore") as f:
                 reader = csv.DictReader(f, delimiter="\t", quoting=csv.QUOTE_MINIMAL)
 
                 # Collect all rows
@@ -237,7 +237,7 @@ class PatentTSVParser:
         """Load names from TSV file (first + last)"""
         result = {}
         try:
-            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+            with open(file_path, encoding="utf-8", errors="ignore") as f:
                 reader = csv.DictReader(f, delimiter="\t", quoting=csv.QUOTE_MINIMAL)
 
                 rows = []
@@ -269,7 +269,7 @@ class PatentTSVParser:
         """Load first assignee for each patent"""
         result = {}
         try:
-            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+            with open(file_path, encoding="utf-8", errors="ignore") as f:
                 reader = csv.DictReader(f, delimiter="\t", quoting=csv.QUOTE_MINIMAL)
 
                 for row in reader:
@@ -296,7 +296,7 @@ class PatentTSVParser:
         """Load CPC codes"""
         result = {}
         try:
-            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+            with open(file_path, encoding="utf-8", errors="ignore") as f:
                 reader = csv.DictReader(f, delimiter="\t", quoting=csv.QUOTE_MINIMAL)
 
                 for row in reader:
@@ -345,7 +345,7 @@ class PatentTSVParser:
         print(f"Parsing main patent file: {main_file}", file=sys.stderr)
 
         try:
-            with open(main_file, "r", encoding="utf-8", errors="ignore") as f:
+            with open(main_file, encoding="utf-8", errors="ignore") as f:
                 reader = csv.DictReader(f, delimiter="\t", quoting=csv.QUOTE_MINIMAL)
 
                 for i, row in enumerate(reader):

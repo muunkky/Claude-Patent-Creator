@@ -293,7 +293,7 @@ class PatentCorpusIndex:
 
         try:
             # Load checkpoint metadata
-            with open(metadata_file, "r", encoding="utf-8") as f:
+            with open(metadata_file, encoding="utf-8") as f:
                 metadata = json.load(f)
 
             # Validate checkpoint matches current data
@@ -660,7 +660,7 @@ class PatentCorpusIndex:
         self.index = faiss.read_index(str(self.faiss_file))
 
         # Load metadata
-        with open(self.metadata_file, "r", encoding="utf-8") as f:
+        with open(self.metadata_file, encoding="utf-8") as f:
             data = json.load(f)
             self.chunks = data["chunks"]
             self.metadata = data["metadata"]

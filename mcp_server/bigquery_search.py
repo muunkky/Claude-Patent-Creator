@@ -11,9 +11,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 try:
+    from google.api_core.exceptions import NotFound
     from google.cloud import bigquery
     from google.cloud.exceptions import GoogleCloudError
-    from google.api_core.exceptions import NotFound
 
     BIGQUERY_AVAILABLE = True
 except ImportError:
@@ -25,7 +25,7 @@ except ImportError:
 # Import logging and monitoring with fallback
 try:
     from logging_config import get_logger
-    from monitoring import track_performance, OperationTimer
+    from monitoring import OperationTimer, track_performance
 
     logger = get_logger()
     LOGGING_AVAILABLE = True
@@ -197,7 +197,7 @@ class BigQueryPatentSearch:
         offset: int = 0,
         start_year: Optional[int] = None,
         end_year: Optional[int] = None,
-        search_fields: List[str] = ["abstract", "title", "claims"],
+        search_fields: Optional[List[str]] = None,
     ) -> List[Dict[str, Any]]:
         """
         Search patents by keyword matching in abstract, title, or claims
@@ -214,6 +214,9 @@ class BigQueryPatentSearch:
         Returns:
             List of patent dictionaries
         """
+        if search_fields is None:
+            search_fields = ["abstract", "title", "claims"]
+            
         if not self.client:
             raise RuntimeError("BigQuery client not initialized")
 

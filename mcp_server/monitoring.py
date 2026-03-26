@@ -29,8 +29,8 @@ latency analysis.
 """
 
 import functools
-import time
 import threading
+import time
 from collections import defaultdict
 from typing import Any, Callable, Dict
 

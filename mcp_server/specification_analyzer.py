@@ -5,14 +5,14 @@ Checks written description and enablement support for patent claims
 """
 
 import re
-from typing import Dict, List, Any, Optional
-from dataclasses import dataclass, field
 from collections import defaultdict
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
 
 try:
-    from analyzer_base import BaseIssue, BaseAnalyzer
+    from analyzer_base import BaseAnalyzer, BaseIssue
 except ImportError:
-    from mcp_server.analyzer_base import BaseIssue, BaseAnalyzer
+    from mcp_server.analyzer_base import BaseAnalyzer, BaseIssue
 
 
 @dataclass

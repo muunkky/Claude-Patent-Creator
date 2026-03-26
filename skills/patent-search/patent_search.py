@@ -15,10 +15,10 @@ import json
 import os
 import sys
 import time
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
-from urllib.error import HTTPError, URLError
 
 
 class PatentsViewAPI:

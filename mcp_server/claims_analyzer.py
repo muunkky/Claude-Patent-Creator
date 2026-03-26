@@ -6,14 +6,14 @@ Based on research from plint, cgupatent/antecedent-check, and PEDANTIC
 """
 
 import re
-from typing import Dict, List, Optional, Set, Any
-from dataclasses import dataclass, field
 from collections import defaultdict
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Set
 
 try:
-    from analyzer_base import BaseIssue, BaseAnalyzer
+    from analyzer_base import BaseAnalyzer, BaseIssue
 except ImportError:
-    from mcp_server.analyzer_base import BaseIssue, BaseAnalyzer
+    from mcp_server.analyzer_base import BaseAnalyzer, BaseIssue
 
 
 @dataclass

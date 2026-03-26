@@ -104,7 +104,7 @@ def process_file(filepath):
     """Process a single file"""
     try:
         # Read with UTF-8
-        with open(filepath, "r", encoding="utf-8") as f:
+        with open(filepath, encoding="utf-8") as f:
             content = f.read()
 
         # Check if file has any non-ASCII characters

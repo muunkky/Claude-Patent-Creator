@@ -99,8 +99,9 @@ def test_patent_details():
             print(f"   Filing Date: {result.get('filing_date', 'N/A')}")
             print(f"   Grant Date: {result.get('grant_date', 'N/A')}")
             print(f"   CPC Codes: {len(result.get('cpc_codes', []))} codes")
-            if result.get("abstract"):
-                print(f"   Abstract: {result.get('abstract')[:100]}...")
+            abstract = result.get("abstract")
+            if abstract:
+                print(f"   Abstract: {abstract[:100]}...")
             return True
         else:
             print("[X] Patent not found")

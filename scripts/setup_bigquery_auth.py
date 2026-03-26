@@ -2,10 +2,10 @@
 """
 Simple script to set up BigQuery authentication using browser OAuth flow
 """
-import sys
 import json
 import os
 import platform
+import sys
 from pathlib import Path
 
 try:
