@@ -4,298 +4,280 @@
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![MCP Server](https://img.shields.io/badge/MCP-FastMCP-purple.svg)](https://github.com/jlowin/fastmcp)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.9+-red.svg)](https://pytorch.org/)
+[![Status](https://img.shields.io/badge/status-beta%20(WIP)-orange.svg)](#project-status)
 
-USPTO patent creation and analysis system with dual-mode architecture: MCP server for programmatic access + Claude Code plugin with skills, autonomous agents, and slash commands. Features hybrid RAG search (FAISS+BM25+reranking) over MPEP/USC/CFR, BigQuery access to 76M+ patents, automated compliance checking, prior art search, and diagram generation.
+**An AI-powered patent creation and analysis system for Claude Code.**
 
-## Project Status
+I built this because I needed to file a patent myself. I used AI to build the system, used the system to file the patent, and it worked. Now it's open source so anyone can use it, whether you're a developer exploring AI tooling or a patent professional looking to speed up your workflow.
 
-**This project is a work in progress and is not fully functional.**
+In plain terms, this tool lets you:
 
-Contributions, issues, and pull requests are welcome. Feel free to explore, experiment, or build upon the code. No guarantees of stability or completeness are provided.
-
----
-
-## Features
-
-### Dual-Mode Architecture
-
-| Mode | Use Case | Components | Access Method |
-|------|----------|------------|---------------|
-| **MCP Server** | Programmatic API access | 20 MCP tools | Any MCP client (Claude Code, Claude Desktop, etc.) |
-| **Claude Code Plugin** | Interactive workflows | 15 skills + 10 agents + slash commands + hooks | Claude Code IDE |
-
-### Core Capabilities
-
-**Search & Retrieval (20 MCP Tools)**
-- **MPEP/USC/CFR Search** - Hybrid RAG (FAISS vector + BM25 lexical + cross-encoder reranking) across 500MB of USPTO regulations
-- **Patent Search** - BigQuery access to 76M+ worldwide patents with full-text search and CPC classification
-- **USPTO API Integration** - Real-time patent data retrieval and recent filings
-- **Prior Art Discovery** - Automated novelty and freedom-to-operate analysis
-
-**Automated Analysis**
-- **Claims Review** - 35 USC 112(b) compliance: definiteness, antecedent basis, indefinite terms, claim structure
-- **Specification Review** - 35 USC 112(a) adequacy: written description, enablement, best mode
-- **Formalities Check** - MPEP 608 compliance: abstract length, title format, drawings, required sections
-
-**Content Generation**
-- **Diagram Generator** - Patent-style technical diagrams using Graphviz (block diagrams, flowcharts, system architectures)
-- **Patent Creation** - Guided workflow for drafting complete USPTO-ready applications
-
-**Claude Code Plugin Features**
-- **15 Skills** - Specialized expertise modules (setup, development, index management, troubleshooting, testing, patent review, search, diagrams, prior art)
-- **10 Autonomous Agents** - Long-running workflows (patent-creator, prior-art-searcher, mpep-expert, patent-drafter, etc.)
-- **Slash Commands** - Quick-access workflows (`/create-patent`, `/search-prior-art`, `/review-claims`, `/full-review`, etc.)
-- **Hooks System** - Custom event-driven automation
+- **Search patent regulations instantly.** Ask a question about MPEP, 35 USC, or 37 CFR and get the relevant sections in under a second, with citations.
+- **Find prior art across 76M+ patents.** Search Google's BigQuery patent database by keywords, CPC codes, or full-text queries.
+- **Check your claims for compliance.** Run your draft claims through automated 35 USC 112(b) analysis and get specific feedback on definiteness, antecedent basis, and structure.
+- **Review your full application.** Specification adequacy, formalities, required sections, abstract length, drawing references, all checked against USPTO standards.
+- **Generate patent diagrams.** Block diagrams, flowcharts, and system architectures in patent style, no design tools needed.
+- **Draft a complete patent application.** A guided workflow that walks you through the whole process, from invention disclosure to filing-ready documents.
 
 ---
 
-## Technology Stack
+## Table of Contents
 
-```
-Architecture:
-  FastMCP (MCP Server Framework)
-  +-- 20 MCP Tools (search, analysis, generation)
-  +-- Claude Code Plugin (skills, agents, commands, hooks)
-
-RAG Pipeline:
-  FAISS Vector Search (BGE-base-en-v1.5, 768-dim embeddings)
-  + BM25 Lexical Search (rank-bm25)
-  + Cross-Encoder Reranking (MS-MARCO MiniLM-L-6-v2)
-  + HyDE Query Expansion (optional, API-based)
-
-Data Sources:
-  - MPEP (Manual of Patent Examining Procedure)
-  - 35 USC (Patent Statutes)
-  - 37 CFR (Patent Regulations)
-  - Subsequent Publications (USPTO updates)
-  - BigQuery patents-public-data (76M+ patents)
-
-ML Stack:
-  PyTorch 2.9+ (CUDA 12.8 for GPU acceleration)
-  Sentence Transformers 5.1+
-  HuggingFace Transformers 4.57+
-  FAISS 1.12+ (CPU/GPU)
-
-Validation & Monitoring:
-  Pydantic v2 (type safety + input validation)
-  Structured logging (JSON/human formats)
-  Performance tracking (@track_performance)
-  Health check system
-```
-
----
-
-## Installation
-
-### Option 1: One-Line Install (Recommended)
-
-```bash
-# Installs package, detects GPU, downloads MPEP, builds index, registers MCP server
-pip install git+https://github.com/RobThePCGuy/Claude-Patent-Creator.git && patent-creator setup
-
-# Restart Claude Code after completion
-```
-
-**What happens automatically:**
-1. Installs Python package dependencies
-2. Detects hardware (NVIDIA GPU/Apple Silicon/CPU)
-3. Uninstalls CPU-only PyTorch if GPU detected
-4. Installs correct PyTorch (CUDA 12.8/MPS/CPU)
-5. Restarts setup with GPU-enabled PyTorch
-6. Downloads MPEP PDFs (500MB) from USPTO
-7. Builds hybrid index with GPU acceleration
-8. Registers MCP server with Claude Code
-
-### Option 2: Manual Installation
-
-```bash
-# Clone repository
-git clone https://github.com/RobThePCGuy/Claude-Patent-Creator.git
-cd Claude-Patent-Creator
-
-# Optional: Create virtual environment
-python -m venv venv
-source venv/bin/activate  # Linux/macOS
-venv\Scripts\activate     # Windows
-
-# Install package
-pip install -e .
-
-# Run setup wizard
-patent-creator setup
-```
-
-### Option 3: Claude Code Plugin (Standalone Mode)
-
-```bash
-# In Claude Code — add the marketplace and install the plugin
-/plugin marketplace add RobThePCGuy/Claude-Patent-Creator
-/plugin install claude-patent-creator-standalone@claude-patent-creator
-
-# Run setup command
-/claude-patent-creator-standalone:setup-patent-system
-```
-
-For local development, you can load the plugin directly without installing:
-
-```bash
-claude --plugin-dir ./Claude-Patent-Creator
-```
+- [Quick Start](#quick-start)
+- [What Can I Actually Do With This?](#what-can-i-actually-do-with-this)
+- [How It Works](#how-it-works)
+- [Installation Options](#installation-options)
+- [CLI Commands](#cli-commands)
+- [MCP Tools Reference](#mcp-tools-reference)
+- [Skills, Agents, and Slash Commands](#skills-agents-and-slash-commands)
+- [Configuration](#configuration)
+- [Requirements](#requirements)
+- [Architecture](#architecture)
+- [Performance](#performance)
+- [Known Issues](#known-issues)
+- [Glossary](#glossary)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [Credits](#credits)
+- [License](#license)
 
 ---
 
 ## Quick Start
 
-### Using MCP Tools
+Pick the path that fits your setup. All three get you to the same place.
 
-```python
-# Search MPEP for claim definiteness requirements
-search_mpep("claim definiteness 35 USC 112(b)", top_k=5)
+### Option A: Claude Code Plugin (Easiest)
 
-# Search 76M+ patents for prior art
-search_patents_bigquery("neural network training", limit=10)
+If you're already using Claude Code, this is the fastest way in:
 
-# Analyze claims for compliance
-review_patent_claims(claims_text)
+```bash
+# Add the marketplace and install
+/plugin marketplace add RobThePCGuy/Claude-Patent-Creator
+/plugin install claude-patent-creator-standalone@claude-patent-creator
 
-# Generate patent diagram
-render_diagram("block", components, connections)
+# Run setup
+/claude-patent-creator-standalone:setup-patent-system
 ```
 
-### Using Claude Code Skills
+### Option B: One-Line Install
 
-Skills activate automatically based on your task:
-
-- `"Install the system"` → **setup-assistant** skill
-- `"Search for patents about AI"` → **patent-search** skill
-- `"Review my claims for compliance"` → **patent-reviewer** skill
-- `"Find MPEP section on enablement"` → **mpep-search** skill
-- `"Build the index"` → **index-manager** skill
-- `"Something is broken"` → **troubleshooting-assistant** skill
-
-### Using Slash Commands
-
-```
-/create-patent          # Complete patent creation workflow (55-80 min)
-/search-prior-art       # Prior art search with novelty analysis
-/review-claims          # Claims-only 35 USC 112(b) analysis
-/review-specification   # Specification-only 35 USC 112(a) analysis
-/review-formalities     # MPEP 608 formalities check
-/full-review            # Parallel review (claims + spec + formalities)
+```bash
+pip install git+https://github.com/RobThePCGuy/Claude-Patent-Creator.git && patent-creator setup
 ```
 
-### Using Autonomous Agents
+This handles everything automatically: installs dependencies, detects your GPU, downloads MPEP PDFs (~500MB), builds the search index, and registers the MCP server with Claude Code. Restart Claude Code when it finishes.
+
+### Option C: Manual Install
+
+```bash
+git clone https://github.com/RobThePCGuy/Claude-Patent-Creator.git
+cd Claude-Patent-Creator
+
+# Optional: use a virtual environment
+python -m venv venv
+source venv/bin/activate  # Linux/macOS
+venv\Scripts\activate     # Windows
+
+pip install -e .
+patent-creator setup
+```
+
+### Verify It Worked
+
+After any install path, run:
+
+```bash
+patent-creator health
+```
+
+You should see a status report showing which components are ready. If something's off, the output will tell you what to fix.
+
+---
+
+## What Can I Actually Do With This?
+
+Here are some real examples. You can type these directly in Claude Code and the right skill or tool kicks in automatically.
+
+| What you want to do | What to say | What happens |
+|---|---|---|
+| Find the MPEP rule on claim definiteness | "Search MPEP for claim definiteness requirements" | Hybrid search returns the most relevant MPEP sections with citations |
+| Look for prior art | "Search for patents about neural network training filed in 2024" | BigQuery searches 76M+ patents and returns matching results |
+| Check your claims | "Review these claims for 35 USC 112(b) compliance" | Automated analysis flags indefinite terms, missing antecedent basis, structural issues |
+| Review a full application | `/full-review` | Runs claims + specification + formalities checks in parallel |
+| Create a patent from scratch | `/create-patent` | Guided 6-phase workflow, takes 55-80 min, produces a complete filing package |
+| Generate a diagram | "Create a block diagram showing the system architecture" | Generates a patent-style Graphviz diagram |
+| Search prior art thoroughly | "Conduct a prior art search for [your invention]" | Automated novelty and freedom-to-operate analysis |
+
+---
+
+## How It Works
+
+The system has two modes that can work independently or together:
+
+**MCP Server** is the engine. It exposes 20+ tools that any MCP-compatible client (Claude Code, Claude Desktop, etc.) can call programmatically. These tools handle search, analysis, and diagram generation.
+
+**Claude Code Plugin** adds the interactive layer. Skills activate automatically based on what you're doing. Agents handle long-running tasks in the background. Slash commands give you quick access to common workflows.
+
+Under the hood, patent regulation search uses a hybrid approach: FAISS vector search finds semantically similar content, BM25 lexical search catches exact terminology matches, and a cross-encoder reranker sorts the combined results by relevance. Patent search goes through Google BigQuery's public patent dataset.
 
 ```
-# Long-running workflows that work independently
-"Create a patent for my invention, use the patent-creator agent"
-"Conduct prior art search for my invention, use the prior-art-searcher agent"
+You (Claude Code) ──> MCP Server ──> Search / Analysis / Diagrams
+                           │
+            ┌──────────────┼──────────────┐
+            v              v              v
+     MPEP/USC/CFR     BigQuery        Graphviz
+     (hybrid RAG)    (76M+ patents)   (diagrams)
 ```
+
+---
+
+## Installation Options
+
+<details>
+<summary><strong>What the setup wizard does (step by step)</strong></summary>
+
+1. Installs Python package dependencies
+2. Detects your hardware (NVIDIA GPU, Apple Silicon, or CPU-only)
+3. If a GPU is detected, uninstalls CPU-only PyTorch and installs the GPU version
+4. Restarts the setup process with GPU-enabled PyTorch
+5. Downloads MPEP, 35 USC, and 37 CFR PDFs (~500MB) from the USPTO
+6. Builds the hybrid search index (FAISS + BM25) with GPU acceleration if available
+7. Registers the MCP server with Claude Code
+
+</details>
+
+<details>
+<summary><strong>Using a virtual environment (recommended for isolation)</strong></summary>
+
+```bash
+python -m venv venv
+source venv/bin/activate  # Linux/macOS
+venv\Scripts\activate     # Windows
+
+pip install git+https://github.com/RobThePCGuy/Claude-Patent-Creator.git && patent-creator setup
+```
+
+If you go this route, remember to activate the venv before running any manual commands. Claude Code handles activation automatically.
+
+</details>
+
+<details>
+<summary><strong>Loading as a local plugin (for development)</strong></summary>
+
+```bash
+claude --plugin-dir ./Claude-Patent-Creator
+```
+
+This loads the plugin directly from your local checkout without installing from the marketplace.
+
+</details>
 
 ---
 
 ## CLI Commands
 
 ```bash
-# Setup MPEP/USC/CFR sources
-patent-creator setup
-
-# Show installation status
-patent-creator status
-
-# System health check (alias for status)
-patent-creator health
-
-# Verify Claude Code MCP configuration
-patent-creator verify-config
-
-# Run the MCP server
-patent-creator serve
-
-# Rebuild MPEP index
-patent-creator rebuild-index
-
-# Download MPEP PDFs only
-patent-creator download-mpep
-
-# Download all sources (MPEP + 35 USC + 37 CFR)
-patent-creator download-all
-
-# Check BigQuery connection
-patent-creator check-bigquery
-
-# Download PatentsView corpus (9.2M+ patents)
-patent-creator download-patents
-
-# Build or rebuild patent search index
-patent-creator build-patent-index
-
-# Show patent corpus status
-patent-creator patents-status
+patent-creator setup             # Full setup wizard (downloads, builds index, registers MCP)
+patent-creator health            # System health check (shows what's working and what isn't)
+patent-creator status            # Same as health
+patent-creator verify-config     # Check Claude Code MCP configuration
+patent-creator serve             # Run the MCP server manually
+patent-creator rebuild-index     # Rebuild the MPEP search index
+patent-creator download-mpep     # Download MPEP PDFs only
+patent-creator download-all      # Download all sources (MPEP + 35 USC + 37 CFR)
+patent-creator check-bigquery    # Test BigQuery connection
+patent-creator download-patents  # Download PatentsView corpus (9.2M+ patents)
+patent-creator build-patent-index # Build patent search index
+patent-creator patents-status    # Show patent corpus status
 ```
-
----
-
-## Requirements
-
-### Minimum
-- **Python:** 3.9 - 3.13 (3.14 experimental)
-- **RAM:** 8GB
-- **Disk:** 2GB (MPEP PDFs + index)
-
-### Optional (Recommended)
-- **GPU:** NVIDIA GPU with CUDA 12.8 (5-10x faster indexing and search)
-- **Google Cloud:** Project with BigQuery enabled (for patent search)
-- **Graphviz:** System package (for diagram generation)
-
-### Python Dependencies
-- `mcp>=1.21.0` - MCP server framework
-- `sentence-transformers>=5.1.2` - Embeddings
-- `faiss-cpu>=1.12.0` - Vector search
-- `numpy>=1.26.0,<2.0.0` - Array operations (CRITICAL: <2.0 for FAISS compatibility)
-- `rank-bm25>=0.2.2` - Lexical search
-- `google-cloud-bigquery>=3.38.0` - Patent search
-- `pydantic>=2.10.0` - Validation
-- `graphviz>=0.21` - Diagram generation
-- `PyMuPDF>=1.26.0` - PDF processing
-
-See `pyproject.toml` for complete dependency list.
 
 ---
 
 ## MCP Tools Reference
 
-### MPEP Search Tools (2)
-- `search_mpep` - Hybrid RAG search with filters
-- `get_mpep_section` - Retrieve full section content
+### Search
 
-### Patent Search Tools (7)
-- `check_bigquery_status` - Verify BigQuery configuration
-- `search_patents_bigquery` - Search 76M+ patents
-- `get_patent_bigquery` - Get full patent details
-- `search_patents_by_cpc_bigquery` - Search by CPC classification
-- `search_uspto_api` - USPTO API search
-- `get_uspto_patent` - Get USPTO patent details
-- `get_recent_uspto_patents` - Recent filings
+| Tool | What it does |
+|---|---|
+| `search_mpep` | Hybrid RAG search across MPEP, 35 USC, and 37 CFR with filters |
+| `get_mpep_section` | Pull full content of a specific MPEP section |
+| `search_patents_bigquery` | Search 76M+ patents by keyword |
+| `get_patent_bigquery` | Get full details on a specific patent |
+| `search_patents_by_cpc_bigquery` | Search by CPC classification code |
+| `search_uspto_api` | Search via the USPTO API |
+| `get_uspto_patent` | Get patent details from USPTO |
+| `get_recent_uspto_patents` | Pull recent filings |
+| `search_prior_art` | Automated prior art discovery |
 
-### Analysis Tools (3)
-- `review_patent_claims` - 35 USC 112(b) compliance
-- `review_specification` - 35 USC 112(a) adequacy
-- `check_formalities` - MPEP 608 compliance
+### Analysis
 
-### Diagram Tools (2)
-- `render_diagram` - Generate patent diagrams
-- `get_diagram_templates` - List available templates
+| Tool | What it does |
+|---|---|
+| `review_patent_claims` | 35 USC 112(b) compliance check (definiteness, antecedent basis, structure) |
+| `review_specification` | 35 USC 112(a) adequacy check (written description, enablement, best mode) |
+| `check_formalities` | MPEP 608 compliance (abstract, title, drawings, required sections) |
 
-### Prior Art Tools (1)
-- `search_prior_art` - Automated prior art discovery
+### Generation
 
-### System Tools (5)
-- `get_index_stats` - Index statistics
-- `check_diagram_tools_status` - Graphviz status
-- `check_patent_corpus_status` - Corpus availability
-- `check_uspto_api_status` - API connectivity
-- `get_patent_details` - Combined patent retrieval
+| Tool | What it does |
+|---|---|
+| `render_diagram` | Generate patent-style diagrams (block, flowchart, system architecture) |
+| `get_diagram_templates` | List available diagram templates |
+
+### System
+
+| Tool | What it does |
+|---|---|
+| `get_index_stats` | Search index statistics |
+| `check_bigquery_status` | BigQuery configuration status |
+| `check_diagram_tools_status` | Graphviz availability |
+| `check_patent_corpus_status` | Patent corpus status |
+| `check_uspto_api_status` | USPTO API connectivity |
+| `get_patent_details` | Combined patent retrieval across sources |
+
+---
+
+## Skills, Agents, and Slash Commands
+
+### Skills (activate automatically)
+
+You don't need to call these directly. Just describe what you want to do and the right skill kicks in.
+
+| Skill | When it activates | What it brings |
+|---|---|---|
+| **setup-assistant** | Installing, configuring, or troubleshooting | Full setup lifecycle guidance |
+| **patent-reviewer** | Reviewing applications for compliance | Expert review with automated checking |
+| **patent-search** | Searching patents or prior art | BigQuery + API search workflows |
+| **mpep-search** | Finding MPEP sections or regulations | Hybrid RAG search |
+| **patent-diagrams** | Creating technical diagrams | Graphviz diagram generation |
+| **prior-art-search** | Novelty or freedom-to-operate analysis | Prior art discovery workflows |
+| **index-manager** | Building or rebuilding the search index | MPEP index management |
+| **development-assistant** | Adding features or creating tools | Development workflows and patterns |
+| **troubleshooting-assistant** | Something's broken | Systematic 6-step diagnostics |
+| **testing-assistant** | Running tests or validation | Test suite execution |
+
+### Agents (long-running, work independently)
+
+These run in the background while you keep working on other things.
+
+| Agent | What it does | How long | Output |
+|---|---|---|---|
+| **patent-creator** | Drafts a complete USPTO-ready application | 55-80 min | Specification, claims, abstract, diagrams, validation report |
+| **prior-art-searcher** | Comprehensive prior art search | 15-30 min | Patentability report, top 10 prior art, claim strategy, IDS list |
+
+To use them: "Create a patent for [your invention], use the patent-creator agent"
+
+### Slash Commands
+
+```
+/create-patent          # Complete patent creation workflow (55-80 min)
+/search-prior-art       # Prior art search with novelty analysis
+/full-review            # Parallel review (claims + spec + formalities)
+/review-claims          # Claims-only 35 USC 112(b) analysis
+/review-specification   # Specification-only 35 USC 112(a) analysis
+/review-formalities     # MPEP 608 formalities check
+```
 
 ---
 
@@ -303,7 +285,7 @@ See `pyproject.toml` for complete dependency list.
 
 ### Environment Variables
 
-Create `.env` file in the project root:
+Create a `.env` file in the project root (see `.env.example`):
 
 ```bash
 # Required for BigQuery patent search
@@ -314,18 +296,18 @@ ANTHROPIC_API_KEY=sk-ant-...
 OPENAI_API_KEY=sk-...
 
 # Optional settings
-PATENT_LOG_LEVEL=INFO              # Logging verbosity
-PATENT_LOG_FORMAT=human            # Log format (json/human)
-PATENT_ENABLE_METRICS=true         # Performance tracking
-PATENT_MPEP_USE_HYDE=false         # HyDE query expansion
-PATENT_MPEP_DEVICE=gpu             # Device (gpu/cpu)
-PATENT_OPERATION_TIMEOUT=300       # Timeout (seconds)
-
-# Windows only (for Git Bash)
-CLAUDE_CODE_GIT_BASH_PATH=C:\dev\Git\bin\bash.exe
+PATENT_LOG_LEVEL=INFO
+PATENT_LOG_FORMAT=human
+PATENT_ENABLE_METRICS=true
+PATENT_MPEP_USE_HYDE=false
+PATENT_MPEP_DEVICE=gpu
+PATENT_OPERATION_TIMEOUT=300
 ```
 
-### BigQuery Setup (Optional)
+<details>
+<summary><strong>Setting up BigQuery (optional, for patent search)</strong></summary>
+
+BigQuery gives you access to 76M+ worldwide patents. It requires a Google Cloud project with billing enabled (the public patent dataset itself is free to query within BigQuery's free tier).
 
 ```bash
 # 1. Install Google Cloud SDK
@@ -334,73 +316,76 @@ CLAUDE_CODE_GIT_BASH_PATH=C:\dev\Git\bin\bash.exe
 # 2. Authenticate
 gcloud auth application-default login
 
-# 3. Set the quota project (Replace with your project ID)
+# 3. Set quota project (replace with your project ID)
 gcloud auth application-default set-quota-project your-project-id
 
-# 4. Set the project environment variable
-# Windows:
-$env:GOOGLE_CLOUD_PROJECT="your-project-id"
-# Linux/macOS:
-export GOOGLE_CLOUD_PROJECT="your-project-id"
+# 4. Set the environment variable
+export GOOGLE_CLOUD_PROJECT="your-project-id"   # Linux/macOS
+$env:GOOGLE_CLOUD_PROJECT="your-project-id"     # Windows PowerShell
 
-# 5. Test connection
+# 5. Test it
 patent-creator check-bigquery
 ```
 
----
+</details>
 
-## Skills System
+<details>
+<summary><strong>Windows-specific setup notes</strong></summary>
 
-Claude automatically activates specialized skills based on your task:
+**Git Bash is required** for the `claude mcp add` command on Windows. Install [Git for Windows](https://git-scm.com/download/win) and set the path:
 
-| Skill | Triggers | What It Does |
-|-------|----------|--------------|
-| **setup-assistant** | Installation, configuration, authentication | Complete setup lifecycle |
-| **development-assistant** | Adding features, creating tools | Feature development workflows |
-| **index-manager** | Building, rebuilding, optimizing index | MPEP index management |
-| **troubleshooting-assistant** | Errors, performance issues | 6-step diagnostic methodology |
-| **testing-assistant** | Running tests, validation | Test suite execution |
-| **patent-reviewer** | Reviewing applications for compliance | Expert review with compliance checking |
-| **patent-search** | Searching patents, prior art | BigQuery + PatentsView search |
-| **mpep-search** | Finding MPEP sections, regulations | Hybrid RAG search |
-| **patent-diagrams** | Creating technical diagrams | Graphviz diagram generation |
-| **prior-art-search** | Novelty/FTO analysis | Prior art discovery workflows |
-
-Each skill includes comprehensive reference documentation in `skills/[skill-name]/reference/`.
-
----
-
-## Autonomous Agents
-
-For long-running workflows requiring uninterrupted focus:
-
-| Agent | Use Case | Duration | Output |
-|-------|----------|----------|--------|
-| **patent-creator** | Create complete USPTO-ready application | 55-80 min | Specification, claims, abstract, diagrams, validation report |
-| **prior-art-searcher** | Comprehensive prior art search | 15-30 min | Patentability report, top 10 prior art, claim strategy, IDS list |
-
-**Usage:**
-```
-"Create a patent for [invention], use the patent-creator agent"
-"Search prior art for [invention], use the prior-art-searcher agent"
+```bash
+# In your .env file
+CLAUDE_CODE_GIT_BASH_PATH=C:\Program Files\Git\bin\bash.exe
 ```
 
-Agents work independently while you continue other tasks.
+**Use forward slashes in MCP config paths.** The setup wizard handles this, but if you're configuring manually:
+
+```bash
+# Correct
+claude mcp add ... -- "C:/Users/YourName/venv/Scripts/python.exe"
+
+# Wrong (will fail)
+claude mcp add ... -- "C:\Users\YourName\venv\Scripts\python.exe"
+```
+
+</details>
 
 ---
 
-## Plugin Installation
+## Requirements
 
-This project is available as a Claude Code plugin from the GitHub marketplace:
+### Minimum
 
-```
-/plugin marketplace add RobThePCGuy/Claude-Patent-Creator
-/plugin install claude-patent-creator-standalone@claude-patent-creator
-```
+- **Python:** 3.9 - 3.13 (3.14 is experimental)
+- **RAM:** 8GB
+- **Disk:** ~2GB (MPEP PDFs + search index)
 
-Once installed, all skills are namespaced under `claude-patent-creator-standalone:` (e.g., `/claude-patent-creator-standalone:create-patent`).
+### Optional (but recommended)
 
-To submit to the official Anthropic marketplace, visit [claude.ai/settings/plugins/submit](https://claude.ai/settings/plugins/submit) or [platform.claude.com/plugins/submit](https://platform.claude.com/plugins/submit).
+- **GPU:** NVIDIA with CUDA 12.8 (makes indexing 5-10x faster) or Apple Silicon (2-3x faster)
+- **Google Cloud:** Project with BigQuery enabled (for patent search)
+- **Graphviz:** System package (for diagram generation)
+
+<details>
+<summary><strong>Full dependency list</strong></summary>
+
+| Package | Version | Purpose |
+|---|---|---|
+| mcp | >=1.21.0 | MCP server framework |
+| sentence-transformers | >=5.1.2 | Text embeddings |
+| faiss-cpu | >=1.13.0 | Vector similarity search |
+| numpy | >=1.26.0, <3.0.0 | Array operations |
+| rank-bm25 | >=0.2.2 | Lexical search |
+| transformers | >=4.57.1 | HuggingFace models |
+| google-cloud-bigquery | >=3.38.0 | Patent search |
+| pydantic | >=2.10.0 | Data validation |
+| graphviz | >=0.21 | Diagram generation |
+| PyMuPDF | >=1.26.0 | PDF processing |
+
+See `pyproject.toml` for the complete list.
+
+</details>
 
 ---
 
@@ -408,10 +393,8 @@ To submit to the official Anthropic marketplace, visit [claude.ai/settings/plugi
 
 ```
 claude-patent-creator/
-├── .claude-plugin/          # Plugin marketplace + manifest
-│   ├── plugin.json          # Plugin identity and component paths
-│   └── marketplace.json     # Marketplace catalog for distribution
-├── mcp_server/              # MCP server core
+├── .claude-plugin/          # Plugin manifest and marketplace config
+├── mcp_server/              # Core MCP server
 │   ├── server.py            # FastMCP entry point
 │   ├── mpep_search.py       # Hybrid RAG search engine
 │   ├── bigquery_search.py   # BigQuery patent search
@@ -420,176 +403,124 @@ claude-patent-creator/
 │   ├── formalities_checker.py     # MPEP 608 checker
 │   ├── diagram_generator.py       # Graphviz diagrams
 │   ├── tools/               # MCP tool definitions
-│   │   ├── mpep_tools.py
-│   │   ├── analyzer_tools.py
-│   │   ├── bigquery_tools.py
-│   │   ├── uspto_search_tools.py
-│   │   ├── diagram_tools.py
-│   │   ├── prior_art_tools.py
-│   │   └── system_tools.py
 │   └── index/               # FAISS + BM25 index (git-ignored)
 ├── skills/                  # Claude Code skills (15)
-│   ├── setup-assistant/
-│   ├── patent-reviewer/
-│   ├── patent-search/
-│   └── ...
 ├── agents/                  # Autonomous agents (10)
-│   ├── patent-creator.md
-│   ├── prior-art-searcher.md
-│   └── ...
-├── commands/                # Slash commands
-│   ├── create-patent.md
-│   ├── search-prior-art.md
-│   └── ...
+├── commands/                # Slash commands (11)
 ├── hooks/                   # Event-driven automation
 ├── scripts/                 # Testing and utilities
-├── pdfs/                    # MPEP PDFs (git-ignored)
-└── CLAUDE.md                # Project documentation
+├── docs/                    # Additional documentation
+├── pdfs/                    # Downloaded MPEP PDFs (git-ignored)
+└── CLAUDE.md                # Full project documentation
 ```
+
+For the complete architecture documentation, development workflows, and troubleshooting guides, see [CLAUDE.md](CLAUDE.md).
 
 ---
 
 ## Performance
 
-### Index Build Times
-- **CPU-only:** 25-35 minutes (MPEP + 35 USC + 37 CFR)
-- **GPU (CUDA):** 3-5 minutes (5-10x faster)
-- **GPU (Apple Silicon MPS):** 8-12 minutes (2-3x faster)
+| Operation | Time | Notes |
+|---|---|---|
+| **MPEP Search** | 50-200ms | Hybrid FAISS + BM25 |
+| **BigQuery Patent Search** | 1-3 sec | 76M+ patents |
+| **USPTO API** | 500ms - 2s | Rate-limited by USPTO |
+| **Index Build (GPU)** | 3-5 min | NVIDIA CUDA 12.8 |
+| **Index Build (Apple Silicon)** | 8-12 min | MPS acceleration |
+| **Index Build (CPU)** | 25-35 min | No GPU |
 
-### Search Performance
-- **MPEP Search:** 50-200ms (hybrid FAISS + BM25)
-- **BigQuery Search:** 1-3 seconds (76M+ patents)
-- **USPTO API:** 500ms - 2s (rate-limited)
-
-### Resource Usage
-- **Index Size:** 500MB - 1GB (FAISS + BM25)
-- **RAM Usage:** 2-4GB (loaded index)
-- **GPU VRAM:** 1-2GB (optional acceleration)
+Resource usage: the loaded search index takes about 2-4GB of RAM and the index files are 500MB-1GB on disk. If you have a GPU, it'll use 1-2GB of VRAM for acceleration.
 
 ---
 
-## Known Issues & Limitations
+## Known Issues
 
-### Critical Compatibility Issues
+> **This project is a work in progress.** Most features work, but expect some rough edges. Contributions, issues, and PRs are welcome.
 
-1. **NumPy 2.x Incompatibility** - `faiss-cpu 1.12.0` is NOT compatible with `numpy>=2.0`. Pin to `numpy<2.0`.
-2. **PyTorch Installation Order** - Install PyTorch BEFORE `sentence-transformers` to avoid CPU-only installation.
-3. **Windows Path Handling** - Use forward slashes in MCP config paths.
-4. **Git Bash Required** - Windows users need Git Bash for `claude mcp add` command.
+Things to be aware of:
 
-See `CLAUDE.md` for complete troubleshooting guide.
+- **PyTorch install order matters.** Install PyTorch before `sentence-transformers`, or you'll end up with CPU-only PyTorch even on a GPU system. The setup wizard handles this, but it can bite you on manual installs.
+- **BigQuery requires a Google Cloud project** with billing enabled. The patent data itself is free to query within the BigQuery free tier.
+- **Some diagram types need Graphviz installed** as a system package (not just the Python bindings).
+- **HyDE query expansion requires API keys** (Anthropic or OpenAI). It's optional and off by default.
+- **Windows users need Git Bash** for the `claude mcp add` command. See [Windows setup notes](#configuration).
 
-### Current Limitations
-
-- Project is work-in-progress, not all features fully functional
-- BigQuery requires Google Cloud project with billing enabled
-- GPU acceleration requires NVIDIA GPU with CUDA 12.8 (Linux/Windows) or Apple Silicon (macOS)
-- Some diagram types require system Graphviz installation
-- HyDE query expansion requires API keys (Anthropic/OpenAI)
+See [CLAUDE.md](CLAUDE.md) for the full troubleshooting guide.
 
 ---
 
-## Credits and Attribution
+## Glossary
 
-### Open Source Dependencies
+If you're coming from the development side and patent terminology is new (or vice versa), here's a quick reference:
 
-This project builds upon excellent open source work:
-
-- [FastMCP](https://github.com/jlowin/fastmcp) - MCP server framework
-- [FAISS](https://github.com/facebookresearch/faiss) - Vector similarity search (Meta AI Research)
-- [Sentence Transformers](https://www.sbert.net/) - Text embeddings (UKP Lab, TU Darmstadt)
-- [HuggingFace Transformers](https://huggingface.co/transformers/) - ML models
-- [PyTorch](https://pytorch.org/) - ML framework
-- [rank-bm25](https://github.com/dorianbrown/rank-bm25) - BM25 lexical search
-- [PyMuPDF](https://pymupdf.readthedocs.io/) - PDF processing
-- [Graphviz](https://graphviz.org/) - Diagram generation
-- [Pydantic](https://docs.pydantic.dev/) - Data validation
-- [Google Cloud BigQuery](https://cloud.google.com/bigquery) - Patent database access
-
-### Data Sources
-
-- **MPEP** - Manual of Patent Examining Procedure, published by the USPTO
-- **35 USC** - United States Code Title 35 (Patents)
-- **37 CFR** - Code of Federal Regulations Title 37 (Patents, Trademarks, and Copyrights)
-- **patents-public-data** - Google BigQuery public dataset containing 76M+ patents
-
-### Embedding Models
-
-- **BGE-base-en-v1.5** by BAAI (Beijing Academy of Artificial Intelligence)
-- **MS-MARCO MiniLM-L-6-v2** cross-encoder by Microsoft
-
----
-
-## Privacy and Security
-
-- This repository has been checked for common PII patterns and obvious secrets
-- Do not commit API keys, OAuth client secrets, private keys, or personal information
-- Use environment variables or local `.env` files to store secrets
-- If you find any personal information in files, please open an issue
-
-### Security Reporting
-
-If you discover a security issue or accidental leak of secrets/PII:
-
-1. Open an issue on the project's issue tracker marked as `security`
-2. For accidentally committed secrets, remove from repo history and rotate immediately
-
----
-
-## Trademark and Attribution
-
-- This project uses factual references to USPTO public resources (MPEP, Open Data Portal APIs) for functionality and documentation
-- "USPTO" is a registered trademark of the United States Patent and Trademark Office
-- This project is not affiliated with, endorsed by, or sponsored by the USPTO
-
----
-
-## License
-
-MIT License - See [LICENSE](LICENSE) file for details.
-
----
-
-## Contributing
-
-This project is open to contributions. Since it's a work in progress:
-
-- Expect breaking changes
-- Documentation may be incomplete or outdated
-- Some features may not work as described
-- Issues and PRs are welcome
-
-### Development Guide
-
-See [CLAUDE.md](CLAUDE.md) for:
-- Complete architecture documentation
-- Development workflows and patterns
-- Skills and agents reference
-- Testing procedures
-- Troubleshooting guides
-- Version compatibility matrix
-
----
-
-## Support
-
-- **Issues:** [GitHub Issues](https://github.com/RobThePCGuy/Claude-Patent-Creator/issues)
-- **Documentation:** [CLAUDE.md](CLAUDE.md)
-- **Examples:** See `skills/` and `agents/` directories
+| Term | What it means |
+|---|---|
+| **MPEP** | Manual of Patent Examining Procedure. The handbook patent examiners use at the USPTO. Think of it as the rulebook. |
+| **35 USC** | Title 35 of the United States Code. The federal patent statutes. |
+| **37 CFR** | Title 37 of the Code of Federal Regulations. The rules that implement the patent statutes. |
+| **USPTO** | United States Patent and Trademark Office. The agency that grants patents. |
+| **CPC** | Cooperative Patent Classification. A system for categorizing patents by technology area. |
+| **Prior Art** | Anything publicly available before your filing date that's relevant to your invention. Finding it is how you figure out if your idea is actually new. |
+| **112(a)** | The section of patent law requiring your application to fully describe and enable the invention. |
+| **112(b)** | The section requiring your claims to be definite and clear. |
+| **MPEP 608** | The section covering formalities like abstract length, title format, and drawing requirements. |
+| **RAG** | Retrieval Augmented Generation. Instead of relying only on what the AI was trained on, it searches a database first and uses those results to give a better answer. |
+| **FAISS** | Facebook AI Similarity Search. A fast way to find similar text by comparing mathematical representations of meaning. |
+| **BM25** | A text search algorithm that matches exact words and phrases. Works alongside FAISS to catch things vector search might miss. |
+| **MCP** | Model Context Protocol. A standard for connecting AI tools to AI models. It's how this system talks to Claude. |
+| **IDS** | Information Disclosure Statement. A form listing prior art references you need to disclose to the USPTO. |
 
 ---
 
 ## Roadmap
 
 - [ ] Complete implementation of all MCP tools
-- [ ] Add evaluation metrics for RAG performance
+- [ ] Evaluation metrics for RAG search performance
 - [ ] Support for international patent offices (EPO, WIPO)
 - [ ] Web interface for non-Claude Code users
-- [ ] Advanced claim dependency graph visualization
+- [ ] Claim dependency graph visualization
 - [ ] Automated obviousness analysis (35 USC 103)
 - [ ] Patent portfolio analysis tools
 - [ ] Integration with patent drafting software
 
 ---
 
-**Built with Claude Code** - This project demonstrates the full capabilities of the Claude Code plugin system, including skills, autonomous agents, slash commands, and MCP server integration.
+## Contributing
+
+This project is open to contributions. Since it's a work in progress, expect breaking changes and incomplete documentation. Issues and PRs are welcome.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the development setup, branch naming, commit conventions, and code style guide.
+
+---
+
+## Credits
+
+### Open Source Dependencies
+
+This project builds on excellent open source work: [FastMCP](https://github.com/jlowin/fastmcp), [FAISS](https://github.com/facebookresearch/faiss) (Meta AI Research), [Sentence Transformers](https://www.sbert.net/) (UKP Lab), [HuggingFace Transformers](https://huggingface.co/transformers/), [PyTorch](https://pytorch.org/), [rank-bm25](https://github.com/dorianbrown/rank-bm25), [PyMuPDF](https://pymupdf.readthedocs.io/), [Graphviz](https://graphviz.org/), [Pydantic](https://docs.pydantic.dev/), and [Google Cloud BigQuery](https://cloud.google.com/bigquery).
+
+### Data Sources
+
+MPEP, 35 USC, and 37 CFR are published by the USPTO. Patent data comes from Google BigQuery's `patents-public-data` dataset (76M+ patents). Embedding models are [BGE-base-en-v1.5](https://huggingface.co/BAAI/bge-base-en-v1.5) (BAAI) and [MS-MARCO MiniLM-L-6-v2](https://huggingface.co/cross-encoder/ms-marco-MiniLM-L-6-v2) (Microsoft).
+
+### Trademark Notice
+
+"USPTO" is a registered trademark of the United States Patent and Trademark Office. This project isn't affiliated with, endorsed by, or sponsored by the USPTO.
+
+---
+
+## Project Status
+
+This project is in **beta**. I'm actively working on it, but not everything is polished and some features may not work as described. If you run into issues, [open one on GitHub](https://github.com/RobThePCGuy/Claude-Patent-Creator/issues) and I'll take a look.
+
+For detailed documentation: [CLAUDE.md](CLAUDE.md) | For security issues: [SECURITY.md](SECURITY.md)
+
+---
+
+## License
+
+MIT License. See [LICENSE](LICENSE) for details.
+
+---
+
+**Built with Claude Code.** The code is the output, but the real work is deciding what needs to exist and how the pieces fit together.
