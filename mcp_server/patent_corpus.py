@@ -455,18 +455,21 @@ class PatentCorpusDownloader:
 
                 # Download with progress
                 downloaded = 0
+                last_percent = -1
                 with zip_path.open("wb") as f:
                     for chunk in response.iter_content(chunk_size=8192):
                         if chunk:
                             f.write(chunk)
                             downloaded += len(chunk)
                             if total_size > 0:
-                                percent = (downloaded / total_size) * 100
-                                print(
-                                    f"\r  Progress: {percent:.1f}%",
-                                    end="",
-                                    file=sys.stderr,
-                                )
+                                percent = int((downloaded / total_size) * 100)
+                                if percent != last_percent:
+                                    last_percent = percent
+                                    print(
+                                        f"\r  Progress: {percent}%",
+                                        end="",
+                                        file=sys.stderr,
+                                    )
 
                 print(
                     f"\r  Downloaded {filename} ({downloaded / 1024 / 1024:.1f} MB)",

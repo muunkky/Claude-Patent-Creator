@@ -55,10 +55,15 @@ class FileDownloader:
             divisor = (1024 * 1024) if use_mb else 1024
             unit = "MB" if use_mb else "KB"
 
+            _last_percent = [-1]  # mutable container for closure
+
             def progress_hook(block_num, block_size, total_size):
                 downloaded = block_num * block_size
                 if total_size > 0:
                     percent = min(100, (downloaded * 100) // total_size)
+                    if percent == _last_percent[0]:
+                        return  # Only print when percentage changes
+                    _last_percent[0] = percent
                     downloaded_size = downloaded / divisor
                     total_size_converted = total_size / divisor
                     print(
