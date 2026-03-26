@@ -9,21 +9,19 @@ Complete one-time setup for all patent creator capabilities.
 
 ## What This Does
 
-Sets up the complete patent creator system:
+The `patent-creator setup` CLI handles everything automatically:
 
-1. **Download MPEP PDFs** (500MB) - USPTO examination manual
-2. **Download Legal Sources** - 35 USC, 37 CFR, Federal Register updates
-3. **Build Search Index** - FAISS + BM25 hybrid search (5-65 min depending on GPU)
-4. **Configure BigQuery** (optional) - Access to 76M+ patents
-5. **Install Dependencies** - Graphviz for diagrams
-6. **Verify Installation** - Run test suite
+1. **Detect GPU** and install PyTorch with correct CUDA version
+2. **Download MPEP PDFs** (500MB) - USPTO examination manual
+3. **Download Legal Sources** - 35 USC, 37 CFR, Federal Register updates
+4. **Build Search Index** - FAISS + BM25 hybrid search (5-65 min depending on GPU)
+5. **Configure MCP server** registration with Claude Code
 
-**Total Time**: 30-90 minutes (most time is index building)
+**Total Time**: 30-90 minutes (most time is MPEP download and index building)
 
 ## Requirements
 
-Before running:
-- **Python 3.9-3.12** (3.11 recommended)
+- **Python 3.9-3.12** (3.11 recommended). Python 3.13+ may lack wheels for PyTorch/FAISS.
 - **8GB+ RAM** (16GB for index building)
 - **5GB free disk space**
 - **Internet connection** (for downloads)
@@ -31,370 +29,142 @@ Before running:
 
 ## Process
 
-### Step 1: Verify Prerequisites
+### Step 1: Find Compatible Python
 
-I'll check:
+**Python 3.13+ will NOT work** — PyTorch and FAISS may not have wheels. Find 3.9-3.12:
+
 ```bash
-python --version  # Must be 3.9-3.12
-pip --version
+# Check default
+python --version 2>&1
+
+# If 3.13+, look for compatible versions:
+# Windows (py launcher):
+py -3.12 --version 2>&1
+py -3.11 --version 2>&1
+py -3.10 --version 2>&1
+
+# Linux/macOS:
+python3.12 --version 2>&1
+python3.11 --version 2>&1
 ```
 
-If Python not found or wrong version, I'll provide install instructions.
+Use the first compatible version found (3.9-3.12). Remember this as `PYTHON_CMD` for all remaining steps.
 
-### Step 2: Install Python Dependencies
+If no compatible Python is found, tell the user to install Python 3.12 from python.org.
 
-I'll install required packages:
-```bash
-cd ${CLAUDE_PLUGIN_ROOT}
-pip install -e .
-```
+### Step 2: Create venv and Install Package
 
-**Dependencies installed**:
-- PyTorch (GPU or CPU version based on hardware)
-- FAISS (vector search)
-- Sentence Transformers (embeddings)
-- Rank-BM25 (keyword search)
-- Pydantic (validation)
-- Google Cloud BigQuery (optional)
-- Graphviz Python bindings
-
-**GPU Detection**:
-- Checks for NVIDIA CUDA
-- Checks for Apple Silicon MPS
-- Falls back to CPU if neither found
-- Installs appropriate PyTorch version
-
-### Step 3: Download MPEP PDFs
-
-I'll download USPTO examination manual:
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}
-python mcp_server/server.py --download-mpep
+${PYTHON_CMD} -m venv venv
 ```
 
-**What downloads**:
-- MPEP ZIP file (500MB)
-- Extracts to 29 PDF files (mpep-0100 through mpep-2900)
-- Location: `${CLAUDE_PLUGIN_ROOT}/pdfs\`
+Use the venv Python for all remaining commands:
+- **Windows**: `${CLAUDE_PLUGIN_ROOT}/venv/Scripts/python`
+- **Linux/macOS**: `${CLAUDE_PLUGIN_ROOT}/venv/bin/python`
 
-**Time**: 5-10 minutes depending on connection
-
-### Step 4: Download Additional Legal Sources
-
-I'll download supplementary sources:
+Install the package:
 ```bash
-python mcp_server/server.py --download-all
+${VENV_PYTHON} -m pip install --upgrade pip
+${VENV_PYTHON} -m pip install -e .
 ```
 
-**Downloads**:
-- 35 USC Consolidated Patent Laws PDF
-- 37 CFR Consolidated Patent Rules PDF
-- Federal Register Subsequent Publications PDF
+### Step 3: Run Automated Setup
 
-**Time**: 2-3 minutes
+The `patent-creator setup` CLI handles GPU detection, PyTorch installation, MPEP downloads, and index building automatically:
 
-### Step 5: Build Search Index
-
-I'll build the hybrid search index:
-```bash
-python mcp_server/server.py --rebuild-index
-```
-
-**What happens**:
-1. Load all MPEP PDFs
-2. Extract and chunk text (12,543 chunks)
-3. Generate embeddings (BGE-base-en-v1.5, 768-dim)
-4. Build FAISS vector index
-5. Build BM25 keyword index
-6. Save indexes to disk
-
-**Time**:
-- With NVIDIA GPU: 5-15 minutes
-- With Apple Silicon: 10-25 minutes
-- CPU only: 35-65 minutes
-
-**Index location**: `${CLAUDE_PLUGIN_ROOT}/python\index\`
-
-**Disk space**: ~1-2 GB for complete index
-
-### Step 6: Configure BigQuery (Optional)
-
-For access to 76M+ patents, I'll help configure Google Cloud:
-
-**Prerequisites**:
-- Google account (free)
-- Google Cloud project (free to create)
-
-**Setup steps**:
-```bash
-# Install Google Cloud SDK
-# (I'll provide OS-specific instructions)
-
-# Authenticate
-gcloud auth application-default login
-
-# Set project ID
-export GOOGLE_CLOUD_PROJECT=your-project-id
-```
-
-**Configuration file**:
-I'll create/update `.env` file:
-```
-GOOGLE_CLOUD_PROJECT=your-project-id
-PATENT_LOG_LEVEL=WARNING
-```
-
-**Cost**: BigQuery is FREE for first 1TB/month (>20,000 patent searches)
-
-### Step 7: Install Graphviz
-
-For patent diagram generation:
-
-**Windows**:
-```bash
-choco install graphviz
-pip install graphviz
-```
-
-**Linux**:
-```bash
-sudo apt install graphviz
-pip install graphviz
-```
-
-**Mac**:
-```bash
-brew install graphviz
-pip install graphviz
-```
-
-### Step 8: Verify Installation
-
-I'll run the test suite:
 ```bash
 cd ${CLAUDE_PLUGIN_ROOT}
-python scripts/test_install.py
+${VENV_PYTHON} -m mcp_server.cli setup --non-interactive
 ```
 
-**Tests**:
-- [OK] Python version
-- [OK] MPEP PDFs present (29 files)
-- [OK] Search index built
-- [OK] GPU detected (if available)
-- [OK] Embeddings model loaded
-- [OK] BigQuery configured (if applicable)
-- [OK] Graphviz installed
-- [OK] All Python dependencies
+**What this does automatically:**
+1. Detects GPU hardware (NVIDIA CUDA, Apple MPS, or CPU)
+2. Installs correct PyTorch version (uninstalls CPU version if GPU detected, restarts itself)
+3. Downloads MPEP PDFs if missing (~500MB)
+4. Downloads 35 USC, 37 CFR, Federal Register updates
+5. Builds FAISS + BM25 hybrid search index (5-65 min)
+6. Registers MCP server with Claude Code
 
-## Setup Status
+**This command is long-running** (30-90 minutes). Use a timeout of at least 600000ms (10 minutes) for the Bash call and check output periodically.
 
-After setup completes, you'll see:
+### Step 4: Verify Installation
 
+After setup completes, verify:
+
+```bash
+${VENV_PYTHON} -c "import torch; print(f'PyTorch {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}')"
 ```
-PATENT CREATOR SYSTEM - SETUP COMPLETE
-======================================
 
-Core Components:
-  [OK] MPEP Search Index (12,543 chunks indexed)
-  [OK] GPU Acceleration (NVIDIA CUDA 12.1)
-  [OK] Embedding Model (BGE-base-en-v1.5)
-  [OK] Hybrid Search (FAISS + BM25)
+```bash
+cd ${CLAUDE_PLUGIN_ROOT}
+${VENV_PYTHON} -m mcp_server.cli health
+```
 
-Optional Components:
-  [OK] BigQuery Patent Search (76M+ patents)
-  [OK] Diagram Generation (Graphviz)
-  [X] USPTO API (not configured)
-  [X] Local Patent Corpus (not downloaded)
+### Step 5: Configure BigQuery (Optional)
 
-System Ready!
+For access to 76M+ patents (FREE, no credit card):
 
-Available Commands:
-  /create-patent          - Create complete patent application
-  /search-prior-art       - Search 76M+ patents for prior art
-  /review-claims          - Analyze claims for 112(b) compliance
-  /research-mpep          - Search MPEP/USC/CFR
+Check if gcloud CLI is installed:
+```bash
+gcloud --version 2>&1
+```
 
-Available Skills:
-  - mpep-search           - MPEP/USC/CFR research
-  - patent-claims-analyzer - Claims compliance checking
-  - bigquery-patent-search - Patent search across 76M+ patents
-  - patent-diagram-generator - Technical diagrams
-  - prior-art-search      - 7-step search methodology
-  - patent-application-creator - Complete patent creation
+If not installed, tell the user to install it from https://cloud.google.com/sdk/docs/install
 
-Available Agents:
-  - patent-researcher     - Prior art search specialist
-  - patent-drafter        - Claims and specification drafting
-  - mpep-expert          - USPTO law and regulations
-  - patent-illustrator    - Technical diagram creation
+If installed, tell the user to run this interactively (requires browser login):
+```
+! gcloud auth application-default login
+```
 
-Try it:
-  /search-prior-art
-  [Describe your invention]
+Then create/update `.env` file in `${CLAUDE_PLUGIN_ROOT}`:
+```
+GOOGLE_CLOUD_PROJECT=their-project-id
 ```
 
 ## Troubleshooting
 
+### PyTorch CPU-Only Despite GPU
+
+The most common issue. `patent-creator setup` handles this automatically by detecting GPU and reinstalling PyTorch. If it still fails:
+
+```bash
+${VENV_PYTHON} -m pip uninstall -y torch torchvision torchaudio
+# For RTX 5090/5080 (compute capability >= 10.0):
+${VENV_PYTHON} -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+# For older NVIDIA GPUs:
+${VENV_PYTHON} -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+```
+
 ### MPEP Download Fails
 
-**Problem**: Download timeout or connection error
-
-**Solution 1**: Retry with longer timeout
+Retry:
 ```bash
-python mcp_server/server.py --download-mpep
+${VENV_PYTHON} -m mcp_server.cli setup --non-interactive
 ```
+Won't re-download files that already exist. Only downloads missing sources.
 
-**Solution 2**: Manual download
-1. Visit: https://www.uspto.gov/web/offices/pac/mpep/index.html
-2. Download MPEP PDF files
-3. Place in: `${CLAUDE_PLUGIN_ROOT}/pdfs\`
+### Index Building Out of Memory
 
-### Index Building Fails
-
-**Problem**: Out of memory during index building
-
-**Solution 1**: Close other applications
-**Solution 2**: Increase system memory
-**Solution 3**: Use CPU-only mode (slower but less memory)
+Use CPU mode (slower but less memory):
 ```bash
-PATENT_MPEP_DEVICE=cpu python mcp_server/server.py --rebuild-index
-```
-
-### GPU Not Detected
-
-**Problem**: Have GPU but using CPU
-
-**Solution 1**: Check CUDA installation
-```bash
-nvidia-smi  # Should show GPU
-```
-
-**Solution 2**: Reinstall PyTorch with CUDA
-```bash
-pip uninstall torch
-pip install torch --index-url https://download.pytorch.org/whl/cu121
+PATENT_MPEP_DEVICE=cpu ${VENV_PYTHON} -m mcp_server.cli setup --rebuild --non-interactive
 ```
 
 ### BigQuery Not Working
 
-**Problem**: BigQuery searches fail
-
-**Solution 1**: Check authentication
 ```bash
 gcloud auth application-default login
 ```
 
-**Solution 2**: Verify project ID
-```bash
-echo $GOOGLE_CLOUD_PROJECT  # Should show your project ID
-```
-
-**Solution 3**: Check API enabled
-Visit: https://console.cloud.google.com/apis/library/bigquery.googleapis.com
-
-## Configuration Options
-
-Create `.env` file in `${CLAUDE_PLUGIN_ROOT}\`:
-
-```bash
-# Google Cloud (for BigQuery patent search)
-GOOGLE_CLOUD_PROJECT=your-project-id
-
-# USPTO API (optional)
-PATENT_USPTO_API_KEY=your-api-key-from-data.uspto.gov
-
-# Search Configuration
-PATENT_MPEP_USE_HYDE=true        # Use HyDE query expansion
-PATENT_MPEP_DEVICE=cuda          # cuda, mps, or cpu
-PATENT_LOG_LEVEL=WARNING         # DEBUG, INFO, WARNING, ERROR
-
-# Performance
-PATENT_MPEP_BATCH_SIZE=32        # Embedding batch size
-PATENT_MPEP_MAX_LENGTH=512       # Max token length
-```
-
-## What Gets Installed
-
-**Directory Structure**:
-```
-${CLAUDE_PLUGIN_ROOT}\
-├── pdfs/                          # Source documents
-│   ├── mpep-0100.pdf
-│   ├── mpep-0200.pdf
-│   ├── ...
-│   ├── mpep-2900.pdf
-│   ├── consolidated_laws.pdf      # 35 USC
-│   ├── consolidated_rules.pdf     # 37 CFR
-│   └── subsequent_publications.pdf # Updates
-├── mcp_server/
-│   ├── index/                     # Search indexes
-│   │   ├── mpep_index.faiss      # Vector index
-│   │   └── mpep_metadata.json    # Metadata + BM25
-│   ├── server.py                 # Main server
-│   ├── mpep_search.py            # Search implementation
-│   ├── claims_analyzer.py        # Claims checker
-│   ├── bigquery_search.py        # BigQuery integration
-│   └── diagram_generator.py      # Diagram creation
-└── .env                          # Configuration
-```
-
 ## After Setup
 
-You're ready to:
+The system is ready. Available capabilities:
 
-1. **Search MPEP**: Use `/research-mpep` or MPEP Search skill
-2. **Search Patents**: Use `/search-prior-art` command
-3. **Review Claims**: Use `/review-claims` command
-4. **Create Patents**: Use `/create-patent` command
-5. **Generate Diagrams**: Use Patent Illustrator agent
+- `/create-patent` - Create complete patent application
+- `/search-prior-art` - Search 76M+ patents
+- `/review-claims` - Analyze claims for 112(b) compliance
+- `/review-specification` - Check specification for 112(a) support
+- `/review-formalities` - Verify MPEP 608 formalities
 
-## Next Steps
-
-Try it out:
-```
-/research-mpep
-
-> Search MPEP for claim definiteness requirements
-
----
-
-/search-prior-art
-
-> I have a blockchain-based authentication system...
-
----
-
-/review-claims
-
-> [Paste your claims]
-
----
-
-/create-patent
-
-> I'll create a complete patent application...
-```
-
-## Re-Running Setup
-
-Safe to run multiple times:
-- Won't re-download if files exist
-- Won't rebuild index unless forced
-- Updates configuration if changed
-
-Force rebuild:
-```bash
-python mcp_server/server.py --rebuild-index
-```
-
-## Uninstall
-
-To remove:
-```bash
-# Remove downloaded files
-rm -rf ${CLAUDE_PLUGIN_ROOT}/pdfs\
-rm -rf ${CLAUDE_PLUGIN_ROOT}/python\index\
-
-# Remove package
-pip uninstall claude-patent-creator
-```
+Tell the user to try: "Search MPEP for claim definiteness requirements"

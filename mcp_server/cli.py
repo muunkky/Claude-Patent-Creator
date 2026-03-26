@@ -374,7 +374,8 @@ def setup_command(args):
         result = subprocess.run(
             [sys.executable, "-m", "mcp_server.cli", "setup"]
             + (["--rebuild"] if args.rebuild else [])
-            + (["--no-hyde"] if args.no_hyde else []),
+            + (["--no-hyde"] if args.no_hyde else [])
+            + (["--non-interactive"] if getattr(args, "non_interactive", False) else []),
             env={**os.environ, "_PYTORCH_ALREADY_INSTALLED": "1"},
         )
         return result.returncode
@@ -450,8 +451,19 @@ def setup_command(args):
     else:
         print("\n[OK] Index already exists (use --rebuild to force rebuild)", file=sys.stderr)
 
-    # Setup BigQuery authentication (optional)
-    setup_bigquery_auth_prompt()
+    # Setup BigQuery authentication (optional, skip in non-interactive mode)
+    if not getattr(args, "non_interactive", False):
+        setup_bigquery_auth_prompt()
+    else:
+        # Check if already configured, just report status
+        creds_path = get_gcloud_credentials_path()
+        if creds_path.exists():
+            print("\n[OK] BigQuery authentication already configured", file=sys.stderr)
+        else:
+            print(
+                "\n[SKIPPED] BigQuery auth (non-interactive mode). Run later: gcloud auth application-default login",
+                file=sys.stderr,
+            )
 
     # Configure MCP server
     mcp_configured = configure_mcp_server()
@@ -1038,6 +1050,11 @@ For more information: https://github.com/RobThePCGuy/Claude-Patent-Creator
     setup_parser = subparsers.add_parser("setup", help="Download sources and build index")
     setup_parser.add_argument("--rebuild", action="store_true", help="Force rebuild of index")
     setup_parser.add_argument("--no-hyde", action="store_true", help="Disable HyDE query expansion")
+    setup_parser.add_argument(
+        "--non-interactive",
+        action="store_true",
+        help="Skip interactive prompts (for CI/plugin use)",
+    )
     setup_parser.set_defaults(func=setup_command)
 
     # Serve command
