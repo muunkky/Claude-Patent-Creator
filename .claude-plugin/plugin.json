@@ -17,9 +17,5 @@
     "patent-search",
     "bigquery",
     "diagrams"
-  ],
-  "commands": "./commands",
-  "agents": "./agents",
-  "skills": "./skills",
-  "hooks": "./hooks/hooks.json"
+  ]
 }
