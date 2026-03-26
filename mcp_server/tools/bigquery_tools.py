@@ -2,13 +2,15 @@
 BigQuery Patent Search Tools
 
 Provides MCP tools for fast, cloud-based patent searching using Google BigQuery.
-Searches across 76M+ worldwide patents or 12M+ US patents with full text indexing.
+Searches across 100M+ worldwide patents with full text indexing for US patents.
 
 Tools:
     - check_bigquery_status: Verify BigQuery availability and configuration
     - search_patents_bigquery: Fast keyword search across patent database
     - get_patent_bigquery: Retrieve full patent details by publication number
     - search_patents_by_cpc_bigquery: Search patents by CPC classification code
+    - search_patents_by_ipc_bigquery: Search patents by IPC classification code
+    - search_patent_family_bigquery: Find related patents across jurisdictions
 
 Dependencies:
     - BigQueryPatentSearch from bigquery_search module
@@ -16,7 +18,10 @@ Dependencies:
     - Logging and monitoring from logging_config.py and monitoring.py
 """
 
+import threading
 from typing import Any, Optional
+
+import anyio
 
 
 def register_bigquery_tools(
@@ -31,6 +36,8 @@ def register_bigquery_tools(
     track_performance,
     PYDANTIC_AVAILABLE,
     BEST_PRACTICES_AVAILABLE,
+    IPCSearchInput=None,
+    FamilySearchInput=None,
 ):
     """Register BigQuery patent search tools with the MCP server.
 
@@ -48,26 +55,31 @@ def register_bigquery_tools(
         BEST_PRACTICES_AVAILABLE: Flag indicating if best practices modules are available
     """
 
-    # State variable for lazy-loaded BigQuery searcher
-    bigquery_searcher = None
+    # Thread-safe lazy-loaded BigQuery searcher
+    _bigquery_searcher = None
+    _bigquery_lock = threading.Lock()
 
     def _ensure_bigquery_searcher():
-        """Lazy load BigQuery patent searcher"""
-        nonlocal bigquery_searcher
-        if bigquery_searcher is None:
-            try:
-                from bigquery_search import BigQueryPatentSearch
+        """Lazy load BigQuery patent searcher (thread-safe)"""
+        nonlocal _bigquery_searcher
+        if _bigquery_searcher is not None:
+            return _bigquery_searcher
+        with _bigquery_lock:
+            # Double-check after acquiring lock
+            if _bigquery_searcher is None:
+                try:
+                    from bigquery_search import BigQueryPatentSearch
 
-                bigquery_searcher = BigQueryPatentSearch()
-            except ImportError as e:
-                raise ValueError(
-                    f"BigQuery not available: {e}. "
-                    "Install with: pip install google-cloud-bigquery db-dtypes"
-                )
-            except Exception as e:
-                raise ValueError(f"Failed to initialize BigQuery: {e}")
+                    _bigquery_searcher = BigQueryPatentSearch()
+                except ImportError as e:
+                    raise ValueError(
+                        f"BigQuery not available: {e}. "
+                        "Install with: pip install google-cloud-bigquery db-dtypes"
+                    )
+                except Exception as e:
+                    raise ValueError(f"Failed to initialize BigQuery: {e}")
 
-        return bigquery_searcher
+        return _bigquery_searcher
 
     @mcp.tool()
     def check_bigquery_status() -> dict[str, Any]:
@@ -95,8 +107,7 @@ def register_bigquery_tools(
             return {"available": False, "error": str(e)}
 
     @mcp.tool()
-    @track_performance("tool_search_patents_bigquery") if BEST_PRACTICES_AVAILABLE else lambda f: f
-    def search_patents_bigquery(
+    async def search_patents_bigquery(
         query: str,
         limit: int = 20,
         country: str = "US",
@@ -144,16 +155,18 @@ def register_bigquery_tools(
                 start_year = validated.start_year
                 end_year = validated.end_year
 
-            log_info("search_patents_bigquery: ensuring bigquery searcher")
-            searcher = _ensure_bigquery_searcher()
-            log_info("search_patents_bigquery: searcher obtained, calling search_by_keywords")
-            results = searcher.search_by_keywords(
-                query=query,
-                country=country,
-                limit=min(limit, 100),
-                start_year=start_year,
-                end_year=end_year,
-            )
+            def _do_search():
+                searcher = _ensure_bigquery_searcher()
+                return searcher.search_by_keywords(
+                    query=query,
+                    country=country,
+                    limit=min(limit, 100),
+                    start_year=start_year,
+                    end_year=end_year,
+                )
+
+            log_info("search_patents_bigquery: running query in thread")
+            results = await anyio.to_thread.run_sync(_do_search)
             log_info(
                 "search_patents_bigquery: got results",
                 count=len(results),
@@ -169,8 +182,7 @@ def register_bigquery_tools(
             return [{"error": f"BigQuery search failed: {str(e)}"}]
 
     @mcp.tool()
-    @track_performance("tool_get_patent_bigquery") if BEST_PRACTICES_AVAILABLE else lambda f: f
-    def get_patent_bigquery(patent_number: str) -> dict[str, Any]:
+    async def get_patent_bigquery(patent_number: str) -> dict[str, Any]:
         """
         Get full patent details from BigQuery by publication number.
 
@@ -187,10 +199,12 @@ def register_bigquery_tools(
                 validated = validate_input(GetPatentInput, patent_number=patent_number)
                 patent_number = validated.patent_number
 
-            log_info("get_patent_bigquery: ensuring bigquery searcher")
-            searcher = _ensure_bigquery_searcher()
-            log_info("get_patent_bigquery: searcher obtained, calling get_patent_details")
-            result = searcher.get_patent_details(patent_number)
+            def _do_get():
+                searcher = _ensure_bigquery_searcher()
+                return searcher.get_patent_details(patent_number)
+
+            log_info("get_patent_bigquery: running query in thread")
+            result = await anyio.to_thread.run_sync(_do_get)
 
             if not result:
                 log_info("get_patent_bigquery: no result found")
@@ -207,12 +221,7 @@ def register_bigquery_tools(
             return {"error": f"Failed to retrieve patent: {str(e)}"}
 
     @mcp.tool()
-    @(
-        track_performance("tool_search_patents_by_cpc_bigquery")
-        if BEST_PRACTICES_AVAILABLE
-        else lambda f: f
-    )
-    def search_patents_by_cpc_bigquery(
+    async def search_patents_by_cpc_bigquery(
         cpc_code: str, limit: int = 20, country: str = "US"
     ) -> list[dict[str, Any]]:
         """
@@ -239,12 +248,14 @@ def register_bigquery_tools(
                 limit = validated.limit
                 country = validated.country
 
-            log_info("search_patents_by_cpc_bigquery: ensuring bigquery searcher")
-            searcher = _ensure_bigquery_searcher()
-            log_info("search_patents_by_cpc_bigquery: searcher obtained, calling search_by_cpc")
-            results = searcher.search_by_cpc(
-                cpc_code=cpc_code, limit=min(limit, 100), country=country
-            )
+            def _do_search():
+                searcher = _ensure_bigquery_searcher()
+                return searcher.search_by_cpc(
+                    cpc_code=cpc_code, limit=min(limit, 100), country=country
+                )
+
+            log_info("search_patents_by_cpc_bigquery: running query in thread")
+            results = await anyio.to_thread.run_sync(_do_search)
             log_info("search_patents_by_cpc_bigquery: got results", count=len(results))
             return results
 
@@ -254,3 +265,102 @@ def register_bigquery_tools(
         except Exception as e:
             log_error("search_patents_by_cpc_bigquery exception", exc_info=True, error=str(e))
             return [{"error": f"CPC search failed: {str(e)}"}]
+
+    @mcp.tool()
+    async def search_patents_by_ipc_bigquery(
+        ipc_code: str, limit: int = 20, country: str = "US"
+    ) -> list[dict[str, Any]]:
+        """
+        Search patents by IPC (International Patent Classification) code using BigQuery.
+
+        IPC is valuable for older patents (pre-2013, before CPC) and non-US patents
+        that may have IPC but lack CPC codes.
+
+        Args:
+            ipc_code: IPC code or prefix (e.g., "G06F", "H04L29/06", "A61K")
+            limit: Maximum results (default 20, max 100)
+            country: Country code filter (US, EP, WO, JP, CN, etc.)
+
+        Returns:
+            List of patents matching the IPC code
+        """
+        log_info(
+            "search_patents_by_ipc_bigquery called", ipc_code=ipc_code, limit=limit, country=country
+        )
+        try:
+            if PYDANTIC_AVAILABLE and IPCSearchInput:
+                validated = validate_input(
+                    IPCSearchInput, ipc_code=ipc_code, limit=limit, country=country
+                )
+                ipc_code = validated.ipc_code
+                limit = validated.limit
+                country = validated.country
+
+            def _do_search():
+                searcher = _ensure_bigquery_searcher()
+                return searcher.search_by_ipc(
+                    ipc_code=ipc_code, limit=min(limit, 100), country=country
+                )
+
+            log_info("search_patents_by_ipc_bigquery: running query in thread")
+            results = await anyio.to_thread.run_sync(_do_search)
+            log_info("search_patents_by_ipc_bigquery: got results", count=len(results))
+            return results
+
+        except ValueError as e:
+            log_error("search_patents_by_ipc_bigquery ValueError", exc_info=True, error=str(e))
+            return [{"error": str(e)}]
+        except Exception as e:
+            log_error("search_patents_by_ipc_bigquery exception", exc_info=True, error=str(e))
+            return [{"error": f"IPC search failed: {str(e)}"}]
+
+    @mcp.tool()
+    async def search_patent_family_bigquery(
+        family_id: int, limit: int = 50
+    ) -> list[dict[str, Any]]:
+        """
+        Find all patent publications sharing a family ID across jurisdictions.
+
+        Patent families link related patents filed in multiple countries. Use this to:
+        - Find the US family member of an EP/WO patent (for full claims text)
+        - Map an invention's worldwide patent coverage
+        - Cross-reference prior art across jurisdictions
+
+        Args:
+            family_id: Patent family identifier (from get_patent_bigquery results)
+            limit: Maximum results (default 50, max 100)
+
+        Returns:
+            List of related patents across all jurisdictions with country codes
+        """
+        log_info("search_patent_family_bigquery called", family_id=family_id, limit=limit)
+        try:
+            if PYDANTIC_AVAILABLE and FamilySearchInput:
+                validated = validate_input(
+                    FamilySearchInput, family_id=family_id, limit=limit
+                )
+                family_id = validated.family_id
+                limit = validated.limit
+
+            def _do_search():
+                searcher = _ensure_bigquery_searcher()
+                return searcher.search_patent_family(
+                    family_id=family_id, limit=min(limit, 100)
+                )
+
+            log_info("search_patent_family_bigquery: running query in thread")
+            results = await anyio.to_thread.run_sync(_do_search)
+            jurisdictions = list({p["country"] for p in results})
+            log_info(
+                "search_patent_family_bigquery: got results",
+                count=len(results),
+                jurisdictions=jurisdictions,
+            )
+            return results
+
+        except ValueError as e:
+            log_error("search_patent_family_bigquery ValueError", exc_info=True, error=str(e))
+            return [{"error": str(e)}]
+        except Exception as e:
+            log_error("search_patent_family_bigquery exception", exc_info=True, error=str(e))
+            return [{"error": f"Family search failed: {str(e)}"}]

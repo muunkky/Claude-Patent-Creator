@@ -257,10 +257,13 @@ class MPEPIndex:
             # Prepend section context to chunk
             contextualized_text = f"[{section_label}] {chunk_text}"
 
-            # Detect cross-references in chunk
+            # Detect cross-references in chunk (US + EPO + PCT)
             has_mpep_ref = bool(re.search(r"MPEP\s*Section ?\s*\d+", chunk_text))
             has_usc_ref = bool(re.search(r"35 U\.?S\.?C\.?\s*Section ?\s*\d+", chunk_text))
             has_cfr_ref = bool(re.search(r"37 C\.?F\.?R\.?\s*Section ?\s*\d+", chunk_text))
+            has_epc_ref = bool(re.search(r"Art(?:icle)?\.?\s*\d+\s*(?:\(\d+\))?\s*(?:EPC)?", chunk_text))
+            has_pct_ref = bool(re.search(r"(?:PCT\s+)?Rule\s+\d+", chunk_text))
+            has_epo_guideline_ref = bool(re.search(r"(?:Part\s+[A-H]|Guidelines?\s+[A-H])", chunk_text))
 
             # Merge base metadata with detected references
             chunk_metadata = {
@@ -269,8 +272,11 @@ class MPEPIndex:
                 "has_mpep_ref": has_mpep_ref,
                 "has_usc_ref": has_usc_ref,
                 "has_cfr_ref": has_cfr_ref,
-                "has_statute": has_usc_ref,
-                "has_rule_ref": has_cfr_ref,
+                "has_epc_ref": has_epc_ref,
+                "has_pct_ref": has_pct_ref,
+                "has_epo_guideline_ref": has_epo_guideline_ref,
+                "has_statute": has_usc_ref or has_epc_ref,
+                "has_rule_ref": has_cfr_ref or has_pct_ref,
             }
 
             chunks.append(chunk_metadata)
@@ -448,6 +454,296 @@ class MPEPIndex:
                 doc.close()
         return chunks
 
+    # ==========================================================================
+    # EPO/WIPO Document Extractors
+    # ==========================================================================
+
+    def extract_text_from_epc(self, pdf_path: Path) -> list[dict[str, Any]]:
+        """Extract text from European Patent Convention PDF.
+
+        The EPC 17th edition PDF contains both the Convention articles and the
+        Implementing Regulations. This method splits them by detecting the
+        section boundary and produces chunks with source="EPC" for articles
+        and source="EPC_RULES" for rules.
+        """
+        import re
+
+        epc_chunks = []
+        rules_chunks = []
+        doc = None
+        try:
+            doc = fitz.open(pdf_path)  # type: ignore[union-attr]
+            current_article = "EPC"
+            in_rules_section = False
+
+            for page_num, page in enumerate(doc):  # type: ignore[arg-type]
+                text = page.get_text()
+                if not text.strip():
+                    continue
+
+                # Detect transition to Implementing Regulations
+                if re.search(r"IMPLEMENTING\s+REGULATIONS", text, re.IGNORECASE):
+                    in_rules_section = True
+
+                if in_rules_section:
+                    # Detect rule numbers: "Rule 1", "Rule 42", etc.
+                    rule_matches = list(re.finditer(r"Rule\s+(\d+)\s*\n\s*([^\n]{1,100})", text))
+                    current_label = current_article
+
+                    if rule_matches:
+                        for match in rule_matches:
+                            rule_num = match.group(1)
+                            rule_title = match.group(2).strip()
+                            current_label = f"Rule {rule_num} EPC - {rule_title}"
+
+                    page_chunks = self._chunk_text_with_metadata(
+                        text=text,
+                        section_label=current_label,
+                        base_metadata={
+                            "source": "EPC_RULES",
+                            "file": pdf_path.name,
+                            "section": current_label,
+                            "page": page_num + 1,
+                            "is_statute": False,
+                            "is_regulation": True,
+                            "is_update": False,
+                        },
+                    )
+                    rules_chunks.extend(page_chunks)
+                else:
+                    # Detect article numbers: "Article 52", "Article 84", etc.
+                    art_matches = list(re.finditer(r"Article\s+(\d+)\s*\n\s*([^\n]{1,100})", text))
+
+                    if art_matches:
+                        for match in art_matches:
+                            art_num = match.group(1)
+                            art_title = match.group(2).strip()
+                            current_article = f"Art. {art_num} EPC - {art_title}"
+
+                    page_chunks = self._chunk_text_with_metadata(
+                        text=text,
+                        section_label=current_article,
+                        base_metadata={
+                            "source": "EPC",
+                            "file": pdf_path.name,
+                            "section": current_article,
+                            "page": page_num + 1,
+                            "is_statute": True,
+                            "is_regulation": False,
+                            "is_update": False,
+                        },
+                    )
+                    epc_chunks.extend(page_chunks)
+
+        except Exception as e:
+            _log_error(f"Error processing EPC {pdf_path}: {e}", exc_info=True, file_path=str(pdf_path))
+        finally:
+            if doc is not None:
+                doc.close()
+
+        _log_info(
+            f"Extracted {len(epc_chunks)} EPC article chunks and {len(rules_chunks)} EPC rules chunks",
+            epc_chunks=len(epc_chunks),
+            rules_chunks=len(rules_chunks),
+        )
+        return epc_chunks + rules_chunks
+
+    def extract_text_from_epo_guidelines(self, text_path: Path) -> list[dict[str, Any]]:
+        """Extract text from EPO Guidelines for Examination (text file from HTML scrape).
+
+        The Guidelines are organized into 8 parts (A-H), each with chapters and
+        sections. This method detects the Part/Chapter/Section structure.
+        """
+        import re
+
+        chunks = []
+        try:
+            text = text_path.read_text(encoding="utf-8")
+            if not text.strip():
+                return chunks
+
+            # Split by part headers
+            current_part = "EPO Guidelines"
+            current_section = "EPO Guidelines"
+
+            # Process line by line, detecting headers
+            lines = text.split("\n")
+            buffer = []
+
+            for line in lines:
+                # Detect part headers: "PART A - FORMALITIES EXAMINATION"
+                part_match = re.match(r"PART\s+([A-H])\s*[-–]\s*(.+)", line, re.IGNORECASE)
+                if part_match:
+                    # Flush buffer
+                    if buffer:
+                        buffer_text = "\n".join(buffer)
+                        page_chunks = self._chunk_text_with_metadata(
+                            text=buffer_text,
+                            section_label=current_section,
+                            base_metadata={
+                                "source": "EPO_GUIDELINES",
+                                "file": text_path.name,
+                                "section": current_section,
+                                "part": current_part,
+                                "is_statute": False,
+                                "is_regulation": False,
+                                "is_update": False,
+                            },
+                        )
+                        chunks.extend(page_chunks)
+                        buffer = []
+
+                    current_part = f"Part {part_match.group(1)}"
+                    current_section = f"EPO Guidelines {current_part} - {part_match.group(2).strip()}"
+                    continue
+
+                # Detect chapter/section headers
+                section_match = re.match(r"(?:###+|####)\s*(.+)", line)
+                if section_match:
+                    # Flush buffer
+                    if buffer:
+                        buffer_text = "\n".join(buffer)
+                        page_chunks = self._chunk_text_with_metadata(
+                            text=buffer_text,
+                            section_label=current_section,
+                            base_metadata={
+                                "source": "EPO_GUIDELINES",
+                                "file": text_path.name,
+                                "section": current_section,
+                                "part": current_part,
+                                "is_statute": False,
+                                "is_regulation": False,
+                                "is_update": False,
+                            },
+                        )
+                        chunks.extend(page_chunks)
+                        buffer = []
+
+                    current_section = f"EPO Guidelines {current_part} - {section_match.group(1).strip()}"
+                    continue
+
+                buffer.append(line)
+
+            # Flush remaining buffer
+            if buffer:
+                buffer_text = "\n".join(buffer)
+                page_chunks = self._chunk_text_with_metadata(
+                    text=buffer_text,
+                    section_label=current_section,
+                    base_metadata={
+                        "source": "EPO_GUIDELINES",
+                        "file": text_path.name,
+                        "section": current_section,
+                        "part": current_part,
+                        "is_statute": False,
+                        "is_regulation": False,
+                        "is_update": False,
+                    },
+                )
+                chunks.extend(page_chunks)
+
+        except Exception as e:
+            _log_error(f"Error processing EPO Guidelines {text_path}: {e}", exc_info=True)
+
+        _log_info(f"Extracted {len(chunks)} EPO Guidelines chunks", chunk_count=len(chunks))
+        return chunks
+
+    def extract_text_from_pct(self, pdf_path: Path) -> list[dict[str, Any]]:
+        """Extract text from PCT Treaty PDF with article detection."""
+        import re
+
+        chunks = []
+        doc = None
+        try:
+            doc = fitz.open(pdf_path)  # type: ignore[union-attr]
+            current_article = "PCT"
+
+            for page_num, page in enumerate(doc):  # type: ignore[arg-type]
+                text = page.get_text()
+                if not text.strip():
+                    continue
+
+                # Detect article headers: "Article 1", "Article 17", etc.
+                art_matches = list(re.finditer(r"Article\s+(\d+)\s*\n\s*([^\n]{1,100})", text))
+
+                if art_matches:
+                    for match in art_matches:
+                        art_num = match.group(1)
+                        art_title = match.group(2).strip()
+                        current_article = f"PCT Art. {art_num} - {art_title}"
+
+                page_chunks = self._chunk_text_with_metadata(
+                    text=text,
+                    section_label=current_article,
+                    base_metadata={
+                        "source": "PCT",
+                        "file": pdf_path.name,
+                        "section": current_article,
+                        "page": page_num + 1,
+                        "is_statute": True,
+                        "is_regulation": False,
+                        "is_update": False,
+                    },
+                )
+                chunks.extend(page_chunks)
+
+        except Exception as e:
+            _log_error(f"Error processing PCT {pdf_path}: {e}", exc_info=True, file_path=str(pdf_path))
+        finally:
+            if doc is not None:
+                doc.close()
+
+        _log_info(f"Extracted {len(chunks)} PCT Treaty chunks", chunk_count=len(chunks))
+        return chunks
+
+    def extract_text_from_pct_rules(self, pdf_path: Path) -> list[dict[str, Any]]:
+        """Extract text from PCT Regulations PDF with rule detection."""
+        import re
+
+        chunks = []
+        doc = None
+        try:
+            doc = fitz.open(pdf_path)  # type: ignore[union-attr]
+            current_rule = "PCT Regulations"
+
+            for page_num, page in enumerate(doc):  # type: ignore[arg-type]
+                text = page.get_text()
+                if not text.strip():
+                    continue
+
+                # Detect rule headers: "Rule 5", "Rule 11", etc.
+                rule_matches = list(re.finditer(r"Rule\s+(\d+(?:\.\d+)?)\s*\n\s*([^\n]{1,100})", text))
+
+                if rule_matches:
+                    for match in rule_matches:
+                        rule_num = match.group(1)
+                        rule_title = match.group(2).strip()
+                        current_rule = f"PCT Rule {rule_num} - {rule_title}"
+
+                page_chunks = self._chunk_text_with_metadata(
+                    text=text,
+                    section_label=current_rule,
+                    base_metadata={
+                        "source": "PCT_RULES",
+                        "file": pdf_path.name,
+                        "section": current_rule,
+                        "page": page_num + 1,
+                        "is_statute": False,
+                        "is_regulation": True,
+                        "is_update": False,
+                    },
+                )
+                chunks.extend(page_chunks)
+
+        except Exception as e:
+            _log_error(f"Error processing PCT Rules {pdf_path}: {e}", exc_info=True, file_path=str(pdf_path))
+        finally:
+            if doc is not None:
+                doc.close()
+
+        _log_info(f"Extracted {len(chunks)} PCT Rules chunks", chunk_count=len(chunks))
+        return chunks
+
     def _offer_pdf_cleanup(self):
         """Ask user if they want to delete PDF files after successful indexing"""
 
@@ -577,6 +873,56 @@ class MPEPIndex:
             )
         else:
             _log_warning("Subsequent Publications not found (run --download-updates to add)")
+
+        # 5. Process EPC (European Patent Convention + Implementing Regulations)
+        from epo_downloaders import EPC_FILE, EPO_GUIDELINES_FILE, PCT_GUIDELINES_FILE, PCT_RULES_FILE, PCT_TREATY_FILE
+
+        epc_file = MPEP_DIR / EPC_FILE
+        if epc_file.exists():
+            _log_info("Processing EPC (European Patent Convention + Implementing Regulations)...")
+            epc_chunks = self.extract_text_from_epc(epc_file)
+            all_chunks.extend(epc_chunks)
+            _log_info(f"Extracted {len(epc_chunks)} EPC chunks", chunk_count=len(epc_chunks))
+        else:
+            _log_info("EPC not found (optional: run --download-epo to add EPO sources)")
+
+        # 6. Process EPO Guidelines for Examination
+        epo_guidelines_file = MPEP_DIR / EPO_GUIDELINES_FILE
+        if epo_guidelines_file.exists():
+            _log_info("Processing EPO Guidelines for Examination...")
+            epo_guide_chunks = self.extract_text_from_epo_guidelines(epo_guidelines_file)
+            all_chunks.extend(epo_guide_chunks)
+            _log_info(f"Extracted {len(epo_guide_chunks)} EPO Guidelines chunks", chunk_count=len(epo_guide_chunks))
+        else:
+            _log_info("EPO Guidelines not found (optional: run --download-epo to add)")
+
+        # 7. Process PCT Treaty
+        pct_file = MPEP_DIR / PCT_TREATY_FILE
+        if pct_file.exists():
+            _log_info("Processing PCT Treaty...")
+            pct_chunks = self.extract_text_from_pct(pct_file)
+            all_chunks.extend(pct_chunks)
+            _log_info(f"Extracted {len(pct_chunks)} PCT Treaty chunks", chunk_count=len(pct_chunks))
+        else:
+            _log_info("PCT Treaty not found (optional: run --download-pct to add PCT sources)")
+
+        # 8. Process PCT Regulations
+        pct_rules_file = MPEP_DIR / PCT_RULES_FILE
+        if pct_rules_file.exists():
+            _log_info("Processing PCT Regulations...")
+            pct_rules_chunks = self.extract_text_from_pct_rules(pct_rules_file)
+            all_chunks.extend(pct_rules_chunks)
+            _log_info(f"Extracted {len(pct_rules_chunks)} PCT Rules chunks", chunk_count=len(pct_rules_chunks))
+        else:
+            _log_info("PCT Regulations not found (optional: run --download-pct to add)")
+
+        # 9. Process PCT Search & Examination Guidelines (if present)
+        pct_guidelines_file = MPEP_DIR / PCT_GUIDELINES_FILE
+        if pct_guidelines_file.exists():
+            _log_info("Processing PCT Search & Examination Guidelines...")
+            pct_guide_chunks = self.extract_text_from_pct_rules(pct_guidelines_file)  # Same format as rules
+            all_chunks.extend(pct_guide_chunks)
+            _log_info(f"Extracted {len(pct_guide_chunks)} PCT Guidelines chunks", chunk_count=len(pct_guide_chunks))
 
         if not all_chunks:
             raise ValueError(

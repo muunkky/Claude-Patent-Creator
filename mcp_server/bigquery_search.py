@@ -65,8 +65,9 @@ class BigQueryPatentSearch:
     """
     Search patents using Google BigQuery Patents Public Data
 
-    This provides access to 76M+ worldwide patents and 12M+ US patents
-    with full-text search capabilities. Much faster than local indexing.
+    This provides access to 100M+ worldwide patents with bibliographic data
+    (title, abstract, CPC, IPC, family_id) and full-text claims/description
+    for US patents. Much faster than local indexing.
     """
 
     PROJECT_ID = "patents-public-data"
@@ -88,10 +89,10 @@ class BigQueryPatentSearch:
                 "Install with: pip install google-cloud-bigquery db-dtypes"
             )
 
-        # Determine project for billing
+        # Determine project for billing — try multiple sources
         self.billing_project = project_id or os.environ.get("GOOGLE_CLOUD_PROJECT")
 
-        # Try to get project from credentials file if not provided
+        # Try credentials file for quota_project_id
         if not self.billing_project:
             try:
                 import json
@@ -104,43 +105,50 @@ class BigQueryPatentSearch:
             except Exception:
                 pass
 
+        # Try gcloud config for default project
+        if not self.billing_project:
+            try:
+                import subprocess
+
+                result = subprocess.run(
+                    ["gcloud", "config", "get-value", "project"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+                if result.returncode == 0 and result.stdout.strip() and result.stdout.strip() != "(unset)":
+                    self.billing_project = result.stdout.strip()
+            except Exception:
+                pass
+
         # Initialize client
+        setup_msg = (
+            "BigQuery requires a Google Cloud project ID for billing.\n"
+            "Setup (5 minutes, no credit card needed):\n"
+            "  1. Install gcloud: https://cloud.google.com/sdk/docs/install\n"
+            "  2. Run: gcloud auth login\n"
+            "  3. Run: gcloud auth application-default login --project YOUR_PROJECT_ID\n"
+            "  4. Or set env var: GOOGLE_CLOUD_PROJECT=your-project-id\n"
+            "\n"
+            "Free tier: 1TB queries/month"
+        )
+
+        if not self.billing_project:
+            raise ValueError(
+                f"No Google Cloud project ID found.\n{setup_msg}"
+            )
+
         try:
-            if self.billing_project:
-                self.client = bigquery.Client(project=self.billing_project)  # type: ignore[union-attr]
-            else:
-                # Try default credentials
-                self.client = bigquery.Client()  # type: ignore[union-attr]
-                self.billing_project = self.client.project
+            self.client = bigquery.Client(project=self.billing_project)  # type: ignore[union-attr]
 
             if LOGGING_AVAILABLE and logger:
                 logger.info(
                     "bigquery_client_initialized", extra={"billing_project": self.billing_project}
                 )
         except Exception as e:
-            error_msg = f"Warning: Could not initialize BigQuery client: {e}"
-            setup_msg = (
-                "\n"
-                "Setup required (5 minutes, no credit card):\n"
-                "  1. Install gcloud: https://cloud.google.com/sdk/docs/install\n"
-                "  2. Run: gcloud auth application-default login\n"
-                "  3. Sign in with Google in the browser that opens\n"
-                "\n"
-                "Free tier: 1TB queries/month\n"
-            )
-
-            if LOGGING_AVAILABLE and logger:
-                logger.error(
-                    "bigquery_client_init_failed",
-                    extra={"error_type": type(e).__name__, "setup_instructions": setup_msg},
-                    exc_info=True,
-                )
-            else:
-                print(error_msg, file=sys.stderr)
-                print(setup_msg, file=sys.stderr)
-
-            self.client = None
-            self.billing_project = None
+            raise ValueError(
+                f"Could not initialize BigQuery client: {e}\n{setup_msg}"
+            ) from e
 
     def check_availability(self) -> dict[str, Any]:
         """
@@ -371,7 +379,8 @@ class BigQueryPatentSearch:
             application_number,
             family_id,
             country_code,
-            cpc
+            cpc,
+            ipc
         FROM `{self.FULL_TABLE_ID}`
         WHERE publication_number = @patent_number
         LIMIT 1
@@ -400,6 +409,13 @@ class BigQueryPatentSearch:
                         if hasattr(cpc, "code"):
                             cpc_codes.append(cpc.code)
 
+                # Extract IPC codes
+                ipc_codes = []
+                if row.ipc:
+                    for ipc in row.ipc:
+                        if hasattr(ipc, "code"):
+                            ipc_codes.append(ipc.code)
+
                 patent_data = {
                     "patent_number": row.publication_number,
                     "application_number": row.application_number,
@@ -413,6 +429,7 @@ class BigQueryPatentSearch:
                     "country": row.country_code,
                     "family_id": row.family_id,
                     "cpc_codes": cpc_codes,
+                    "ipc_codes": ipc_codes,
                 }
 
                 # Log successful retrieval
@@ -548,6 +565,199 @@ class BigQueryPatentSearch:
                 logger.error("bigquery_cpc_search_failed", extra=error_extra, exc_info=True)
             else:
                 print(f"BigQuery CPC search error: {e}", file=sys.stderr)
+
+            raise
+
+    def search_by_ipc(
+        self, ipc_code: str, limit: int = 20, country: str = "US"
+    ) -> list[dict[str, Any]]:
+        """
+        Search patents by IPC (International Patent Classification) code.
+
+        IPC is valuable for older patents (pre-2013, before CPC adoption) and
+        non-US patents that may have IPC but lack CPC codes.
+
+        Args:
+            ipc_code: IPC code prefix (e.g., "G06F", "H04L29/06")
+            limit: Maximum number of results
+            country: Country code filter (US, EP, WO, JP, CN, etc.)
+
+        Returns:
+            List of patent dictionaries
+        """
+        if not self.client:
+            raise RuntimeError("BigQuery client not initialized")
+
+        log_extra = {"ipc_code": ipc_code, "limit": limit, "country": country}
+
+        if LOGGING_AVAILABLE and logger:
+            logger.info("bigquery_ipc_search_started", extra=log_extra)
+
+        sql = f"""
+        SELECT
+            publication_number,
+            title_localized[SAFE_OFFSET(0)].text AS title,
+            abstract_localized[SAFE_OFFSET(0)].text AS abstract,
+            CAST(filing_date AS STRING) AS filing_date,
+            CAST(publication_date AS STRING) AS publication_date,
+            application_number,
+            country_code
+        FROM `{self.FULL_TABLE_ID}`,
+        UNNEST(ipc) AS ipc_entry
+        WHERE
+            country_code = @country
+            AND STARTS_WITH(ipc_entry.code, @ipc_code)
+        ORDER BY publication_date DESC
+        LIMIT @limit
+        """
+
+        job_config = bigquery.QueryJobConfig(  # type: ignore[union-attr]
+            query_parameters=[
+                bigquery.ScalarQueryParameter("ipc_code", "STRING", ipc_code),  # type: ignore[union-attr]
+                bigquery.ScalarQueryParameter("country", "STRING", country),  # type: ignore[union-attr]
+                bigquery.ScalarQueryParameter("limit", "INT64", limit),  # type: ignore[union-attr]
+            ]
+        )
+
+        try:
+            if LOGGING_AVAILABLE and OperationTimer:
+                with OperationTimer("bigquery_query"):
+                    results = self.client.query(sql, job_config=job_config).result(timeout=30)
+            else:
+                results = self.client.query(sql, job_config=job_config).result(timeout=30)
+
+            patents = []
+            for row in results:
+                patents.append(
+                    {
+                        "patent_number": row.publication_number,
+                        "application_number": row.application_number,
+                        "title": row.title or "",
+                        "abstract": row.abstract or "",
+                        "filing_date": self._format_date(row.filing_date),
+                        "publication_date": self._format_date(row.publication_date),
+                        "country": row.country_code,
+                    }
+                )
+
+            completion_extra = {
+                **log_extra,
+                "results_count": len(patents),
+                "bytes_processed": (
+                    results.total_bytes_processed
+                    if hasattr(results, "total_bytes_processed")
+                    else 0
+                ),
+            }
+
+            if LOGGING_AVAILABLE and logger:
+                logger.info("bigquery_ipc_search_completed", extra=completion_extra)
+
+            return patents
+
+        except Exception as e:
+            error_extra = {**log_extra, "error_type": type(e).__name__, "error_message": str(e)}
+
+            if LOGGING_AVAILABLE and logger:
+                logger.error("bigquery_ipc_search_failed", extra=error_extra, exc_info=True)
+            else:
+                print(f"BigQuery IPC search error: {e}", file=sys.stderr)
+
+            raise
+
+    def search_patent_family(
+        self, family_id: int, limit: int = 50
+    ) -> list[dict[str, Any]]:
+        """
+        Search for all patent publications sharing a family_id.
+
+        Patent families link related patents filed across multiple jurisdictions.
+        This enables cross-jurisdiction analysis: find an EP/WO patent by
+        title/abstract, then use family_id to locate the US family member
+        for full claims text (only available for US patents in BigQuery).
+
+        Args:
+            family_id: Patent family identifier
+            limit: Maximum number of results
+
+        Returns:
+            List of patent dictionaries across all jurisdictions
+        """
+        if not self.client:
+            raise RuntimeError("BigQuery client not initialized")
+
+        log_extra = {"family_id": family_id, "limit": limit}
+
+        if LOGGING_AVAILABLE and logger:
+            logger.info("bigquery_family_search_started", extra=log_extra)
+
+        sql = f"""
+        SELECT
+            publication_number,
+            title_localized[SAFE_OFFSET(0)].text AS title,
+            abstract_localized[SAFE_OFFSET(0)].text AS abstract,
+            CAST(filing_date AS STRING) AS filing_date,
+            CAST(grant_date AS STRING) AS grant_date,
+            CAST(publication_date AS STRING) AS publication_date,
+            application_number,
+            family_id,
+            country_code,
+            kind_code
+        FROM `{self.FULL_TABLE_ID}`
+        WHERE family_id = @family_id
+        ORDER BY country_code, publication_date DESC
+        LIMIT @limit
+        """
+
+        job_config = bigquery.QueryJobConfig(  # type: ignore[union-attr]
+            query_parameters=[
+                bigquery.ScalarQueryParameter("family_id", "INT64", family_id),  # type: ignore[union-attr]
+                bigquery.ScalarQueryParameter("limit", "INT64", limit),  # type: ignore[union-attr]
+            ]
+        )
+
+        try:
+            if LOGGING_AVAILABLE and OperationTimer:
+                with OperationTimer("bigquery_query"):
+                    results = self.client.query(sql, job_config=job_config).result(timeout=30)
+            else:
+                results = self.client.query(sql, job_config=job_config).result(timeout=30)
+
+            patents = []
+            for row in results:
+                patents.append(
+                    {
+                        "patent_number": row.publication_number,
+                        "application_number": row.application_number,
+                        "title": row.title or "",
+                        "abstract": row.abstract or "",
+                        "filing_date": self._format_date(row.filing_date),
+                        "grant_date": self._format_date(row.grant_date),
+                        "publication_date": self._format_date(row.publication_date),
+                        "country": row.country_code,
+                        "kind_code": row.kind_code or "",
+                        "family_id": row.family_id,
+                    }
+                )
+
+            completion_extra = {
+                **log_extra,
+                "results_count": len(patents),
+                "jurisdictions": list({p["country"] for p in patents}),
+            }
+
+            if LOGGING_AVAILABLE and logger:
+                logger.info("bigquery_family_search_completed", extra=completion_extra)
+
+            return patents
+
+        except Exception as e:
+            error_extra = {**log_extra, "error_type": type(e).__name__, "error_message": str(e)}
+
+            if LOGGING_AVAILABLE and logger:
+                logger.error("bigquery_family_search_failed", extra=error_extra, exc_info=True)
+            else:
+                print(f"BigQuery family search error: {e}", file=sys.stderr)
 
             raise
 

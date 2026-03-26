@@ -133,6 +133,29 @@ def install_pytorch():
             return False  # Failed, continue anyway
 
 
+def _verify_bigquery_setup():
+    """Verify BigQuery is functional — catches missing project ID early during setup."""
+    try:
+        from bigquery_search import BigQueryPatentSearch
+
+        searcher = BigQueryPatentSearch()
+        # Quick test query to verify end-to-end
+        searcher.client.query("SELECT 1").result(timeout=10)
+        print(
+            f"  BigQuery: [OK] (project: {searcher.billing_project})",
+            file=sys.stderr,
+        )
+    except ValueError as e:
+        # Missing project ID or bad config — raised by our improved __init__
+        print(f"\n[WARNING] BigQuery not configured: {e}", file=sys.stderr)
+        print("  BigQuery patent search will not work until this is fixed.", file=sys.stderr)
+        print("  The MPEP search and other features will still work.\n", file=sys.stderr)
+    except ImportError:
+        print("  BigQuery: [X] google-cloud-bigquery not installed", file=sys.stderr)
+    except Exception as e:
+        print(f"  BigQuery: [WARNING] {e}", file=sys.stderr)
+
+
 def configure_mcp_server():
     """
     Register the MCP server with Claude Code using 'claude mcp add' command
@@ -458,12 +481,15 @@ def setup_command(args):
         # Check if already configured, just report status
         creds_path = get_gcloud_credentials_path()
         if creds_path.exists():
-            print("\n[OK] BigQuery authentication already configured", file=sys.stderr)
+            print("\n[OK] BigQuery credentials found", file=sys.stderr)
         else:
             print(
                 "\n[SKIPPED] BigQuery auth (non-interactive mode). Run later: gcloud auth application-default login",
                 file=sys.stderr,
             )
+
+    # Verify BigQuery actually works (catches missing project ID)
+    _verify_bigquery_setup()
 
     # Configure MCP server
     mcp_configured = configure_mcp_server()

@@ -211,7 +211,7 @@ class ClaimsAnalyzer(BaseAnalyzer):
                             term=f"the {element}",
                             problem=f'POSSIBLE antecedent basis issue: "the {element}" may lack proper introduction',
                             fix=f'MANUAL VERIFICATION REQUIRED: Check if "{element}" is properly introduced earlier. Tool has high false positive rate.',
-                            mpep_ref="MPEP 2173.05(e)",
+                            legal_ref="MPEP 2173.05(e)",
                             confidence="LOW",  # Low confidence - manual verification required
                         )
                     )
@@ -231,7 +231,7 @@ class ClaimsAnalyzer(BaseAnalyzer):
                         term=f"said {element}",
                         problem=f'POSSIBLE antecedent basis issue: "said {element}" may lack proper introduction',
                         fix=f'MANUAL VERIFICATION REQUIRED: Check if "{element}" is properly introduced earlier. Tool has high false positive rate.',
-                        mpep_ref="MPEP 2173.05(e)",
+                        legal_ref="MPEP 2173.05(e)",
                         confidence="LOW",  # Low confidence - manual verification required
                     )
                 )
@@ -287,7 +287,7 @@ class ClaimsAnalyzer(BaseAnalyzer):
                         term=phrase,
                         problem=f'Phrase "{phrase}" - {reason}',
                         fix=f'Remove "{phrase}" or replace with specific language',
-                        mpep_ref="MPEP 2173.05(d)",
+                        legal_ref="MPEP 2173.05(d)",
                     )
                 )
 
@@ -309,7 +309,7 @@ class ClaimsAnalyzer(BaseAnalyzer):
                         term=term,
                         problem=f'Subjective term "{term}" - {reason}',
                         fix="Replace with objective, measurable criteria or quantitative values",
-                        mpep_ref="MPEP 2173.05(b)",
+                        legal_ref="MPEP 2173.05(b)",
                         confidence="HIGH",  # Objective pattern matching - reliable
                     )
                 )
@@ -336,7 +336,7 @@ class ClaimsAnalyzer(BaseAnalyzer):
                     term=match.group(0),
                     problem="Internal cross-reference creates confusion and may render claim indefinite",
                     fix="Repeat the relevant limitation language inline instead of cross-referencing",
-                    mpep_ref="MPEP 2173.05(p)",
+                    legal_ref="MPEP 2173.05(p)",
                 )
             )
 
@@ -357,7 +357,7 @@ class ClaimsAnalyzer(BaseAnalyzer):
                     term=f"{word_count} words",
                     problem=f"Claim is very long ({word_count} words), which may indicate complexity",
                     fix="Consider breaking into multiple claims or simplifying structure",
-                    mpep_ref="MPEP 608.01(n)",
+                    legal_ref="MPEP 608.01(n)",
                 )
             )
 
@@ -373,7 +373,7 @@ class ClaimsAnalyzer(BaseAnalyzer):
                     term=f"{max_depth} levels deep",
                     problem=f"Excessive nesting ({max_depth} levels) makes claim difficult to parse",
                     fix="Consider flattening claim structure or breaking into dependent claims",
-                    mpep_ref="MPEP 608.01(n)",
+                    legal_ref="MPEP 608.01(n)",
                 )
             )
 

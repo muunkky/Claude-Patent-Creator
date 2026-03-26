@@ -56,7 +56,8 @@ if PYDANTIC_AVAILABLE:
             default=None, description="Number of candidates to retrieve before reranking"
         )
         source_filter: Optional[str] = Field(
-            default=None, description="Filter by source (MPEP, 35_USC, 37_CFR, SUBSEQUENT)"
+            default=None,
+            description="Filter by source: US (MPEP, 35_USC, 37_CFR, SUBSEQUENT), EPO (EPC, EPC_RULES, EPO_GUIDELINES), PCT (PCT, PCT_RULES)",
         )
         is_statute: Optional[bool] = Field(default=None, description="Filter for statutes only")
         is_regulation: Optional[bool] = Field(
@@ -69,7 +70,7 @@ if PYDANTIC_AVAILABLE:
         def validate_source_filter(cls, v: Optional[str]) -> Optional[str]:
             """Validate source filter."""
             if v is not None:
-                valid_sources = {"MPEP", "35_USC", "37_CFR", "SUBSEQUENT"}
+                valid_sources = {"MPEP", "35_USC", "37_CFR", "SUBSEQUENT", "EPC", "EPC_RULES", "EPO_GUIDELINES", "PCT", "PCT_RULES"}
                 if v not in valid_sources:
                     raise ValueError(f"source_filter must be one of {valid_sources}")
             return v
@@ -86,7 +87,8 @@ if PYDANTIC_AVAILABLE:
             default=20, description="Maximum number of results (1-100)"
         )
         country: constr(min_length=2, max_length=2) = Field(  # type: ignore[valid-type]
-            default="US", description="Two-letter country code"
+            default="US",
+            description="Two-letter country code (US, EP, WO, JP, CN, etc.). Note: claims/description text only available for US patents.",
         )
         start_year: Optional[conint(ge=1, le=2100)] = Field(  # type: ignore[valid-type]
             default=None, description="Filter patents filed on or after this year"
@@ -157,8 +159,63 @@ if PYDANTIC_AVAILABLE:
             default=20, description="Maximum number of results (1-100)"
         )
         country: constr(min_length=2, max_length=2) = Field(  # type: ignore[valid-type]
-            default="US", description="Two-letter country code"
+            default="US",
+            description="Two-letter country code (US, EP, WO, JP, CN, etc.)",
         )
+
+    class IPCSearchInput(BaseModel):  # type: ignore[misc]
+        """Input validation for IPC (International Patent Classification) code search."""
+
+        ipc_code: constr(min_length=1, max_length=50) = Field(  # type: ignore[valid-type]
+            ...,
+            description="IPC classification code or prefix",
+            examples=["G06F", "H04L29/06", "A61K"],
+        )
+        limit: conint(ge=1, le=100) = Field(  # type: ignore[valid-type]
+            default=20, description="Maximum number of results (1-100)"
+        )
+        country: constr(min_length=2, max_length=2) = Field(  # type: ignore[valid-type]
+            default="US",
+            description="Two-letter country code (US, EP, WO, JP, CN, etc.)",
+        )
+
+    class FamilySearchInput(BaseModel):  # type: ignore[misc]
+        """Input validation for patent family search."""
+
+        family_id: int = Field(
+            ...,
+            description="Patent family identifier (links related patents across jurisdictions)",
+        )
+        limit: conint(ge=1, le=100) = Field(  # type: ignore[valid-type]
+            default=50, description="Maximum number of results (1-100)"
+        )
+
+    class SearchPatentLawInput(BaseModel):  # type: ignore[misc]
+        """Input validation for cross-jurisdiction patent law search."""
+
+        query: constr(min_length=1, max_length=1000) = Field(  # type: ignore[valid-type]
+            ...,
+            description="Search query text",
+            examples=["claim definiteness requirements", "sufficiency of disclosure"],
+        )
+        top_k: conint(ge=1, le=20) = Field(  # type: ignore[valid-type]
+            default=5, description="Number of results to return (1-20)"
+        )
+        jurisdiction: Optional[str] = Field(
+            default=None,
+            description="Filter by jurisdiction: US, EPO, PCT, or None for all",
+        )
+
+        @field_validator("jurisdiction")
+        @classmethod
+        def validate_jurisdiction(cls, v: Optional[str]) -> Optional[str]:
+            """Validate jurisdiction filter."""
+            if v is not None:
+                valid_jurisdictions = {"US", "EPO", "PCT"}
+                v = v.upper()
+                if v not in valid_jurisdictions:
+                    raise ValueError(f"jurisdiction must be one of {valid_jurisdictions}")
+            return v
 
     # Review Input Models
 
@@ -289,6 +346,15 @@ else:
         pass
 
     class CPCSearchInput:  # type: ignore[no-redef]
+        pass
+
+    class IPCSearchInput:  # type: ignore[no-redef]
+        pass
+
+    class FamilySearchInput:  # type: ignore[no-redef]
+        pass
+
+    class SearchPatentLawInput:  # type: ignore[no-redef]
         pass
 
     class ReviewClaimsInput:  # type: ignore[no-redef]

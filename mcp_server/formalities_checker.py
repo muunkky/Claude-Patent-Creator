@@ -163,7 +163,7 @@ class FormalitiesChecker(BaseAnalyzer):
                     current_value=f"{word_count} words",
                     required_value=f"{self.ABSTRACT_MIN_WORDS}-{self.ABSTRACT_MAX_WORDS} words",
                     fix=f"Expand abstract to at least {self.ABSTRACT_MIN_WORDS} words",
-                    mpep_ref="MPEP 608.01(b)",
+                    legal_ref="MPEP 608.01(b)",
                 )
             )
             result["compliant"] = False
@@ -178,7 +178,7 @@ class FormalitiesChecker(BaseAnalyzer):
                     current_value=f"{word_count} words",
                     required_value=f"{self.ABSTRACT_MIN_WORDS}-{self.ABSTRACT_MAX_WORDS} words",
                     fix=f"Reduce abstract to {self.ABSTRACT_MAX_WORDS} words or less",
-                    mpep_ref="MPEP 608.01(b)",
+                    legal_ref="MPEP 608.01(b)",
                 )
             )
             result["compliant"] = False
@@ -194,7 +194,7 @@ class FormalitiesChecker(BaseAnalyzer):
                     current_value=f"{line_count} lines",
                     required_value=f"<= {self.ABSTRACT_MAX_LINES} lines",
                     fix="Condense abstract to fit within 15 lines",
-                    mpep_ref="MPEP 608.01(b)",
+                    legal_ref="MPEP 608.01(b)",
                 )
             )
             result["compliant"] = False
@@ -210,7 +210,7 @@ class FormalitiesChecker(BaseAnalyzer):
                     current_value=f'Contains: {", ".join(found_forbidden)}',
                     required_value='Should avoid "means", "said", "whereby"',
                     fix=f'Remove or rephrase to avoid: {", ".join(found_forbidden)}',
-                    mpep_ref="MPEP 608.01(b)",
+                    legal_ref="MPEP 608.01(b)",
                 )
             )
             result["issues"].append("Contains claim language")
@@ -225,7 +225,7 @@ class FormalitiesChecker(BaseAnalyzer):
                     current_value="Multiple paragraphs",
                     required_value="Single paragraph",
                     fix="Combine into single paragraph",
-                    mpep_ref="MPEP 608.01(b)",
+                    legal_ref="MPEP 608.01(b)",
                 )
             )
             result["issues"].append("Multiple paragraphs")
@@ -256,7 +256,7 @@ class FormalitiesChecker(BaseAnalyzer):
                     current_value=f"{char_count} characters",
                     required_value=f"<= {self.TITLE_MAX_CHARS} characters",
                     fix=f"Shorten title by {char_count - self.TITLE_MAX_CHARS} characters",
-                    mpep_ref="37 CFR 1.72(a)",
+                    legal_ref="37 CFR 1.72(a)",
                 )
             )
             result["compliant"] = False
@@ -272,7 +272,7 @@ class FormalitiesChecker(BaseAnalyzer):
                     current_value=f"{char_count} characters",
                     required_value=f"<= {self.TITLE_RECOMMENDED_CHARS} characters (recommended)",
                     fix=f"Consider shortening by {char_count - self.TITLE_RECOMMENDED_CHARS} characters",
-                    mpep_ref="MPEP 606",
+                    legal_ref="MPEP 606",
                 )
             )
             result["issues"].append("Could be shorter")
@@ -287,7 +287,7 @@ class FormalitiesChecker(BaseAnalyzer):
                     current_value=f'Starts with "{title.split()[0]}"',
                     required_value="Articles should be capitalized in title",
                     fix="Ensure proper capitalization",
-                    mpep_ref="MPEP 606",
+                    legal_ref="MPEP 606",
                 )
             )
             result["issues"].append("Starts with article")
@@ -303,7 +303,7 @@ class FormalitiesChecker(BaseAnalyzer):
                     current_value="Contains (TM), (R), or (c)",
                     required_value="Should not include trademark symbols",
                     fix="Remove trademark symbols from title",
-                    mpep_ref="MPEP 608.01(b)",
+                    legal_ref="MPEP 608.01(b)",
                 )
             )
             result["compliant"] = False
@@ -346,7 +346,7 @@ class FormalitiesChecker(BaseAnalyzer):
                     current_value="Not found",
                     required_value="Must include all required sections",
                     fix=f'Add "{section}" section to specification',
-                    mpep_ref="37 CFR 1.77",
+                    legal_ref="37 CFR 1.77",
                 )
             )
 
@@ -380,7 +380,7 @@ class FormalitiesChecker(BaseAnalyzer):
                         current_value="No drawings",
                         required_value=f'Must include figures: {", ".join(sorted(referenced_figures))}',
                         fix="Create and include all referenced figures per 37 CFR 1.84",
-                        mpep_ref="37 CFR 1.81",
+                        legal_ref="37 CFR 1.81",
                     )
                 )
                 result["compliant"] = False
@@ -396,7 +396,7 @@ class FormalitiesChecker(BaseAnalyzer):
                         current_value="Section not found",
                         required_value='Must include "Brief Description of Drawings" section',
                         fix='Add "Brief Description of Drawings" section listing all figures',
-                        mpep_ref="37 CFR 1.77(b)(3)",
+                        legal_ref="37 CFR 1.77(b)(3)",
                     )
                 )
                 result["compliant"] = False

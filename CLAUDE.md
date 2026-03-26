@@ -43,9 +43,11 @@ pip install git+https://github.com/RobThePCGuy/Claude-Patent-Creator.git && pate
 ```
 
 **What you can do now:**
-- Search 76M+ patents via BigQuery
-- Search MPEP, 35 USC, 37 CFR regulations
-- Review patent applications for USPTO compliance
+- Search 100M+ patents via BigQuery (worldwide)
+- Search US patent law (MPEP, 35 USC, 37 CFR)
+- Search EPO patent law (EPC, EPO Guidelines) and PCT rules
+- Review patent applications for USPTO, EPO, or PCT compliance
+- Search EP patents via EPO OPS API (full-text claims/description)
 - Generate patent-style technical diagrams
 - Create complete patent applications from scratch
 
@@ -60,10 +62,18 @@ pip install git+https://github.com/RobThePCGuy/Claude-Patent-Creator.git && pate
 | Feature | Description | Status |
 |---------|-------------|--------|
 | **MPEP Search** | Search Manual of Patent Examining Procedure + 35 USC + 37 CFR | Ready |
-| **Patent Search** | Search 76M+ worldwide patents via BigQuery | Ready |
-| **Claims Review** | Automated 35 USC 112(b) compliance checking | Ready |
-| **Specification Review** | Written description, enablement, best mode analysis | Ready |
-| **Formalities Check** | MPEP 608 compliance (abstract, title, drawings) | Ready |
+| **Patent Law Search** | Cross-jurisdiction search across US, EPO, and PCT law | Ready |
+| **Patent Search** | Search 100M+ worldwide patents via BigQuery | Ready |
+| **EPO Patent Search** | Search EP patents via EPO OPS API (full-text claims) | Ready |
+| **IPC Search** | Search patents by IPC classification code | Ready |
+| **Patent Family Search** | Find related patents across jurisdictions | Ready |
+| **US Claims Review** | Automated 35 USC 112(b) compliance checking | Ready |
+| **EPO Claims Review** | Automated Art. 84 EPC compliance checking | Ready |
+| **US Specification Review** | Written description, enablement, best mode analysis | Ready |
+| **EPO Specification Review** | Art. 83 EPC sufficiency of disclosure analysis | Ready |
+| **US Formalities Check** | MPEP 608 compliance (abstract, title, drawings) | Ready |
+| **EPO Formalities Check** | Rules 42-49 EPC compliance | Ready |
+| **PCT Formalities Check** | PCT Rules 5-12 compliance | Ready |
 | **Diagram Generation** | Patent-style technical diagrams (Graphviz) | Ready |
 | **Patent Creation** | Complete patent application drafting workflow | Ready |
 
@@ -74,7 +84,9 @@ FastMCP (MCP Server Framework)
 +- RAG Pipeline: FAISS + BM25 + HyDE + Cross-Encoder Reranking
 +- Embeddings: BGE-base-en-v1.5 (768-dim)
 +- Reranker: MS-MARCO MiniLM-L-6-v2
-+- Patent Search: Google BigQuery (patents-public-data)
++- Patent Search: Google BigQuery (100M+ patents worldwide)
++- EPO Search: EPO OPS API v3.2 (EP full-text claims/description)
++- Legal Sources: MPEP + 35 USC + 37 CFR + EPC + EPO Guidelines + PCT Rules
 +- Validation: Pydantic v2 with type safety
 +- Logging: Structured JSON/human formats
 +- GPU Acceleration: PyTorch CUDA 12.8
@@ -101,6 +113,10 @@ Claude will automatically activate specialized skills based on your task. These 
 | **patent-diagram-generator** | Creating technical diagrams for patents | Graphviz-based diagram generation |
 | **patent-application-creator** | Drafting patent applications interactively | Guided end-to-end creation (prior art, claims, spec, diagrams, compliance) |
 | **prior-art-search** | Conducting novelty or freedom-to-operate analysis | Prior art search and analysis workflows |
+| **epo-patent-analyzer** | Reviewing patents for EPO compliance | Art. 84 (claims), Art. 83 (sufficiency), Rules 42-49 (formalities) |
+| **epo-patent-search** | Searching EP patents via EPO OPS + BigQuery | EPO OPS API + BigQuery cross-jurisdiction search |
+| **pct-application** | Preparing PCT international applications | PCT Rules 5-12 compliance, unity of invention |
+| **epc-search** | Searching EPC, EPO Guidelines, PCT rules | `search_patent_law` with jurisdiction filtering |
 
 Each skill includes detailed reference documentation in `skills/[skill-name]/reference/` directories.
 
@@ -148,6 +164,11 @@ Quick-access workflows for common patent tasks:
 | `/review-claims` | Claims-only analysis (35 USC 112b) | Focused claims compliance checking |
 | `/review-specification` | Specification analysis (35 USC 112a) | Focused specification adequacy review |
 | `/review-formalities` | Formalities check (MPEP 608) | Abstract, title, drawings compliance |
+| `/review-epo-claims` | EPO Art. 84 claims analysis | EPO claims clarity, conciseness, support |
+| `/review-epo-formalities` | EPO Rules 42-49 formalities check | EPO-specific formalities compliance |
+| `/check-pct-formalities` | PCT Rules 5-12 formalities check | PCT international application compliance |
+| `/create-epo-patent` | EPO patent creation workflow | Create patent targeting EPO filing |
+| `/search-epo` | EPO patent search | Search via EPO OPS API + BigQuery |
 
 ---
 
@@ -163,22 +184,22 @@ Quick-access workflows for common patent tasks:
 +----------------v----------------------------------------+
 |              FastMCP Server (server.py)                  |
 |  +-------------------------------------------------+   |
-|  | MCP Tools: 25+ tools for patent review & search |   |
+|  | MCP Tools: 35+ tools for patent review & search |   |
 |  +-------------------------------------------------+   |
-+--+----------+----------+--------------------------+----+
-   |          |          |                          |
-   v          v          v                          v
-+------+ +--------+ +----------+         +--------------+
-| MPEP | |BigQuery| |Analyzers |         |  Diagrams    |
-|Search| | Cloud  | | (Claims, |         |  (Graphviz)  |
-|      | |        | |  Spec,   |         |              |
-|500MB | |  76M+  | |Formality)|         |   SVG/PNG    |
-+--+---+ +---+----+ +----+-----+         +--------------+
-   |         |           |
-   v         v           v
++--+------+------+------+---------------------+-----+----+
+   |      |      |      |                     |     |
+   v      v      v      v                     v     v
++----+ +-----+ +----+ +----------+ +-------+ +--------+
+|MPEP| | BQ  | |EPO | |US + EPO  | | PCT   | |Diagrams|
+|+EPC| |100M+| |OPS | |+ PCT     | |Forms  | |(Graphvz|
+|+PCT| |     | |API | |Analyzers | |       | |        |
++--+-+ +--+--+ +--+-+ +----+-----+ +--+----+ +--------+
+   |      |       |         |          |
+   v      v       v         v          v
 +--------------------------------------------------+
 |       RAG Pipeline (Hybrid Search)               |
 | FAISS Vector + BM25 Lexical + HyDE + Reranking  |
+| Sources: MPEP + USC + CFR + EPC + EPO + PCT     |
 +--------------------------------------------------+
 ```
 
@@ -191,11 +212,17 @@ Quick-access workflows for common patent tasks:
 
 mcp_server/              # Core MCP server and tools
 +-- server.py            # FastMCP server entry point (main)
-+-- mpep_search.py       # MPEP/USC/CFR hybrid RAG search
-+-- bigquery_search.py   # BigQuery patent search (76M+ patents)
++-- mpep_search.py       # US + EPO + PCT hybrid RAG search
++-- bigquery_search.py   # BigQuery patent search (100M+ patents)
++-- epo_api.py           # EPO OPS API v3.2 client
++-- epo_downloaders.py   # EPO/WIPO legal document downloaders
 +-- claims_analyzer.py   # 35 USC 112(b) compliance checker
++-- epo_claims_analyzer.py     # Art. 84 EPC compliance checker
 +-- specification_analyzer.py  # 112(a) adequacy checker
++-- epo_specification_analyzer.py  # Art. 83 EPC sufficiency checker
 +-- formalities_checker.py     # MPEP 608 formalities
++-- epo_formalities_checker.py # Rules 42-49 EPC formalities
++-- pct_formalities_checker.py # PCT Rules 5-12 formalities
 +-- diagram_generator.py       # Graphviz diagram tools
 
 commands/                # Slash commands (11)
@@ -368,6 +395,10 @@ python scripts/test_install.py
 # Required
 GOOGLE_CLOUD_PROJECT=your_project_id
 ANTHROPIC_API_KEY=<YOUR_ANTHROPIC_API_KEY>
+
+# EPO OPS API (optional — for EP patent search with full-text claims)
+EPO_OPS_KEY=your_epo_consumer_key          # Free at developers.epo.org
+EPO_OPS_SECRET=your_epo_consumer_secret
 
 # Optional (with defaults)
 PATENT_LOG_LEVEL=INFO              # Logging level

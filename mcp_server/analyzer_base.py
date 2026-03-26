@@ -13,15 +13,20 @@ class BaseIssue:
         severity: CRITICAL, IMPORTANT, or MINOR
         problem: Description of the issue
         fix: Recommended fix
-        mpep_ref: MPEP section reference
+        legal_ref: Legal reference (e.g., "MPEP 2173.05(b)", "Art. 84 EPC", "PCT Rule 6")
         confidence: Confidence level (HIGH, MEDIUM, LOW)
     """
 
     severity: str
     problem: str
     fix: str
-    mpep_ref: str
+    legal_ref: str
     confidence: str = "HIGH"
+
+    @property
+    def mpep_ref(self) -> str:
+        """Backward-compatible alias for legal_ref."""
+        return self.legal_ref
 
 
 class BaseAnalyzer(ABC):

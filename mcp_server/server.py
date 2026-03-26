@@ -53,12 +53,15 @@ try:
         PYDANTIC_AVAILABLE,
         CheckFormalitiesInput,
         CPCSearchInput,
+        FamilySearchInput,
         GetPatentInput,
+        IPCSearchInput,
         RenderDiagramInput,
         ReviewClaimsInput,
         ReviewSpecificationInput,
         SearchBigQueryInput,
         SearchMPEPInput,
+        SearchPatentLawInput,
         SearchUSPTOInput,
         validate_input,
     )
@@ -75,6 +78,9 @@ except ImportError as e:
     SearchUSPTOInput = None  # type: ignore[assignment]
     GetPatentInput = None  # type: ignore[assignment]
     CPCSearchInput = None  # type: ignore[assignment]
+    IPCSearchInput = None  # type: ignore[assignment]
+    FamilySearchInput = None  # type: ignore[assignment]
+    SearchPatentLawInput = None  # type: ignore[assignment]
     ReviewClaimsInput = None  # type: ignore[assignment]
     ReviewSpecificationInput = None  # type: ignore[assignment]
     CheckFormalitiesInput = None  # type: ignore[assignment]
@@ -291,12 +297,22 @@ def download_subsequent_publications(dest_dir: Path = MPEP_DIR) -> bool:
 
 def check_all_sources(dest_dir: Path = MPEP_DIR) -> dict[str, bool]:
     """Check which source documents are available"""
-    return {
+    from epo_downloaders import EPC_FILE, EPO_GUIDELINES_FILE, PCT_GUIDELINES_FILE, PCT_RULES_FILE, PCT_TREATY_FILE
+
+    us_sources = {
         "mpep": check_mpep_pdfs(dest_dir) > 0,
         "35_usc": (dest_dir / USC_35_FILE).exists(),
         "37_cfr": (dest_dir / CFR_37_FILE).exists(),
         "subsequent_pubs": (dest_dir / SUBSEQUENT_PUBS_FILE).exists(),
     }
+    epo_pct_sources = {
+        "epc": (dest_dir / EPC_FILE).exists(),
+        "epo_guidelines": (dest_dir / EPO_GUIDELINES_FILE).exists(),
+        "pct_treaty": (dest_dir / PCT_TREATY_FILE).exists(),
+        "pct_rules": (dest_dir / PCT_RULES_FILE).exists(),
+        "pct_guidelines": (dest_dir / PCT_GUIDELINES_FILE).exists(),
+    }
+    return {**us_sources, **epo_pct_sources}
 
 
 # ============================================================================
@@ -306,8 +322,11 @@ def check_all_sources(dest_dir: Path = MPEP_DIR) -> dict[str, bool]:
 # Import tool registration functions
 from tools.analyzer_tools import register_analyzer_tools  # noqa: E402
 from tools.bigquery_tools import register_bigquery_tools  # noqa: E402
+from tools.epo_analyzer_tools import register_epo_analyzer_tools  # noqa: E402
 from tools.diagram_tools import register_diagram_tools  # noqa: E402
+from tools.epo_search_tools import register_epo_tools  # noqa: E402
 from tools.mpep_tools import register_mpep_tools  # noqa: E402
+from tools.patent_law_tools import register_patent_law_tools  # noqa: E402
 from tools.prior_art_tools import register_prior_art_tools  # noqa: E402
 from tools.system_tools import register_system_tools  # noqa: E402
 from tools.uspto_search_tools import register_uspto_tools  # noqa: E402
@@ -347,6 +366,35 @@ def _register_all_tools():
         BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,
     )
 
+    # EPO/PCT analyzers
+    try:
+        from epo_claims_analyzer import EPOClaimsAnalyzer
+        from epo_formalities_checker import EPOFormalitiesChecker
+        from epo_specification_analyzer import EPOSpecificationAnalyzer
+        from pct_formalities_checker import PCTFormalitiesChecker
+
+        register_epo_analyzer_tools(
+            mcp=mcp,
+            mpep_index=mpep_index,
+            EPOClaimsAnalyzer=EPOClaimsAnalyzer,
+            EPOSpecificationAnalyzer=EPOSpecificationAnalyzer,
+            EPOFormalitiesChecker=EPOFormalitiesChecker,
+            PCTFormalitiesChecker=PCTFormalitiesChecker,
+            log_info=_log_info,
+            log_warning=_log_warning,
+            log_error=_log_error,
+            validate_input=validate_input,
+            ReviewClaimsInput=ReviewClaimsInput,
+            ReviewSpecificationInput=ReviewSpecificationInput,
+            CheckFormalitiesInput=CheckFormalitiesInput,
+            track_performance=track_performance,
+            log_operation_result=log_operation_result,
+            PYDANTIC_AVAILABLE=PYDANTIC_AVAILABLE,
+            BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,
+        )
+    except ImportError as e:
+        _log_warning(f"EPO/PCT analyzer tools not available: {e}")
+
     register_uspto_tools(
         mcp=mcp,
         log_info=_log_info,
@@ -354,6 +402,16 @@ def _register_all_tools():
         validate_input=validate_input,
         SearchUSPTOInput=SearchUSPTOInput,
         GetPatentInput=GetPatentInput,
+        track_performance=track_performance,
+        PYDANTIC_AVAILABLE=PYDANTIC_AVAILABLE,
+        BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,
+    )
+
+    register_epo_tools(
+        mcp=mcp,
+        log_info=_log_info,
+        log_error=_log_error,
+        validate_input=validate_input,
         track_performance=track_performance,
         PYDANTIC_AVAILABLE=PYDANTIC_AVAILABLE,
         BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,
@@ -371,6 +429,8 @@ def _register_all_tools():
         track_performance=track_performance,
         PYDANTIC_AVAILABLE=PYDANTIC_AVAILABLE,
         BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,
+        IPCSearchInput=IPCSearchInput,
+        FamilySearchInput=FamilySearchInput,
     )
 
     register_prior_art_tools(
@@ -390,6 +450,18 @@ def _register_all_tools():
         log_warning=_log_warning,
         validate_input=validate_input,
         RenderDiagramInput=RenderDiagramInput,
+        track_performance=track_performance,
+        PYDANTIC_AVAILABLE=PYDANTIC_AVAILABLE,
+        BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,
+    )
+
+    register_patent_law_tools(
+        mcp=mcp,
+        mpep_index=mpep_index,
+        log_info=_log_info,
+        log_error=_log_error,
+        validate_input=validate_input,
+        SearchPatentLawInput=SearchPatentLawInput,
         track_performance=track_performance,
         PYDANTIC_AVAILABLE=PYDANTIC_AVAILABLE,
         BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,

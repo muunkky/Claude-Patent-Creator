@@ -84,7 +84,8 @@ ${VENV_PYTHON} -m mcp_server.cli setup --non-interactive
 3. Downloads MPEP PDFs if missing (~500MB)
 4. Downloads 35 USC, 37 CFR, Federal Register updates
 5. Builds FAISS + BM25 hybrid search index (5-65 min)
-6. Registers MCP server with Claude Code
+6. Verifies BigQuery configuration (reports if project ID is missing)
+7. Registers MCP server with Claude Code
 
 **This command is long-running** (30-90 minutes). Use a timeout of at least 600000ms (10 minutes) for the Bash call and check output periodically.
 
@@ -101,20 +102,48 @@ cd ${CLAUDE_PLUGIN_ROOT}
 ${VENV_PYTHON} -m mcp_server.cli health
 ```
 
-### Step 5: Configure BigQuery (Optional)
+### Step 5: Configure BigQuery (Required for patent search)
 
-For access to 76M+ patents (FREE, no credit card):
+BigQuery provides access to 76M+ patents. It requires a Google Cloud project ID for billing (free tier: 1TB/month, no credit card).
 
-Check if gcloud CLI is installed:
+**Check if the setup output showed a BigQuery warning.** If it said `[WARNING] BigQuery not configured` or `No Google Cloud project ID found`, the user needs to set up a project.
+
+**Step 5a: Check gcloud CLI**
 ```bash
 gcloud --version 2>&1
 ```
 
 If not installed, tell the user to install it from https://cloud.google.com/sdk/docs/install
 
-If installed, tell the user to run this interactively (requires browser login):
+**Step 5b: Authenticate and set project**
+
+Tell the user to run these interactively (requires browser):
 ```
+! gcloud auth login
 ! gcloud auth application-default login
+```
+
+Then check for existing projects:
+```bash
+gcloud projects list 2>&1
+```
+
+If they have a project, set it:
+```bash
+gcloud config set project PROJECT_ID
+```
+
+If they don't have a project, tell them to create one at https://console.cloud.google.com/projectcreate
+
+**Step 5c: Verify BigQuery works**
+```bash
+cd ${CLAUDE_PLUGIN_ROOT}
+${VENV_PYTHON} -c "from mcp_server.bigquery_search import BigQueryPatentSearch; s = BigQueryPatentSearch(); print(f'BigQuery OK (project: {s.billing_project})')"
+```
+
+If this fails with "No Google Cloud project ID found", the project wasn't set. Create a `.env` file as fallback:
+```bash
+echo "GOOGLE_CLOUD_PROJECT=their-project-id" > ${CLAUDE_PLUGIN_ROOT}/.env
 ```
 
 Then create/update `.env` file in `${CLAUDE_PLUGIN_ROOT}`:
