@@ -12,12 +12,13 @@ I built this because I needed to file a patent myself. I used AI to build the sy
 
 In plain terms, this tool lets you:
 
-- **Search patent regulations instantly.** Ask a question about MPEP, 35 USC, or 37 CFR and get the relevant sections in under a second, with citations.
-- **Find prior art across 76M+ patents.** Search Google's BigQuery patent database by keywords, CPC codes, or full-text queries.
-- **Check your claims for compliance.** Run your draft claims through automated 35 USC 112(b) analysis and get specific feedback on definiteness, antecedent basis, and structure.
-- **Review your full application.** Specification adequacy, formalities, required sections, abstract length, drawing references, all checked against USPTO standards.
+- **Search patent regulations instantly.** Ask a question about MPEP, 35 USC, 37 CFR, EPC, or PCT rules and get the relevant sections in under a second, with citations.
+- **Find prior art across 100M+ patents.** Search Google's BigQuery patent database by keywords, CPC/IPC codes, or full-text queries. Link related patents across jurisdictions with family search.
+- **Check your claims for compliance.** Run your draft claims through automated analysis for USPTO (35 USC 112(b)) or EPO (Art. 84 EPC) and get specific feedback on definiteness, two-part form, and structure.
+- **Review your full application.** Specification adequacy, formalities, required sections — checked against USPTO, EPO, or PCT standards.
+- **Search EP patents with full text.** Get full claims and description text for European patents via the EPO OPS API (not available in BigQuery).
 - **Generate patent diagrams.** Block diagrams, flowcharts, and system architectures in patent style, no design tools needed.
-- **Draft a complete patent application.** A guided workflow that walks you through the whole process, from invention disclosure to filing-ready documents.
+- **Draft a complete patent application.** A guided workflow that walks you through the whole process, from invention disclosure to filing-ready documents — for USPTO or EPO filing.
 
 ---
 
@@ -102,7 +103,7 @@ Here are some real examples. You can type these directly in Claude Code and the 
 | What you want to do | What to say | What happens |
 |---|---|---|
 | Find the MPEP rule on claim definiteness | "Search MPEP for claim definiteness requirements" | Hybrid search returns the most relevant MPEP sections with citations |
-| Look for prior art | "Search for patents about neural network training filed in 2024" | BigQuery searches 76M+ patents and returns matching results |
+| Look for prior art | "Search for patents about neural network training filed in 2024" | BigQuery searches 100M+ patents and returns matching results |
 | Check your claims | "Review these claims for 35 USC 112(b) compliance" | Automated analysis flags indefinite terms, missing antecedent basis, structural issues |
 | Review a full application | `/full-review` | Runs claims + specification + formalities checks in parallel |
 | Create a patent from scratch | `/create-patent` | Guided 6-phase workflow, takes 55-80 min, produces a complete filing package |
@@ -127,7 +128,7 @@ You (Claude Code) ──> MCP Server ──> Search / Analysis / Diagrams
             ┌──────────────┼──────────────┐
             v              v              v
      MPEP/USC/CFR     BigQuery        Graphviz
-     (hybrid RAG)    (76M+ patents)   (diagrams)
+     (hybrid RAG)    (100M+ patents)   (diagrams)
 ```
 
 ---
@@ -202,7 +203,7 @@ patent-creator patents-status    # Show patent corpus status
 |---|---|
 | `search_mpep` | Hybrid RAG search across MPEP, 35 USC, and 37 CFR with filters |
 | `get_mpep_section` | Pull full content of a specific MPEP section |
-| `search_patents_bigquery` | Search 76M+ patents by keyword |
+| `search_patents_bigquery` | Search 100M+ patents by keyword |
 | `get_patent_bigquery` | Get full details on a specific patent |
 | `search_patents_by_cpc_bigquery` | Search by CPC classification code |
 | `search_uspto_api` | Search via the USPTO API |
@@ -254,7 +255,7 @@ You don't need to call these directly. Just describe what you want to do and the
 | **patent-reviewer** | Reviewing a complete application for compliance | Comprehensive review (claims + spec + formalities) |
 | **patent-claims-analyzer** | Reviewing claims specifically for 35 USC 112(b) | Deep-dive claims analysis (definiteness, antecedent basis, structure) |
 | **patent-search** | Searching patents or prior art | BigQuery + PatentsView API search workflows |
-| **bigquery-patent-search** | Quick BigQuery-only patent search | Keyword, CPC, and patent detail retrieval across 76M+ patents |
+| **bigquery-patent-search** | Quick BigQuery-only patent search | Keyword, CPC, and patent detail retrieval across 100M+ patents |
 | **mpep-search** | Finding MPEP sections or regulations | Hybrid RAG search |
 | **patent-diagram-generator** | Creating technical diagrams | Flowcharts, block diagrams, system architectures via Graphviz |
 | **patent-application-creator** | Drafting a patent application interactively | Guided end-to-end workflow (prior art, claims, spec, diagrams, compliance) |
@@ -298,6 +299,11 @@ Create a `.env` file in the project root (see `.env.example`):
 # Required for BigQuery patent search
 GOOGLE_CLOUD_PROJECT=your-project-id
 
+# Optional: EPO OPS API (for EP patent full-text search)
+# Free registration at https://developers.epo.org
+EPO_OPS_KEY=your-consumer-key
+EPO_OPS_SECRET=your-consumer-secret
+
 # Optional API keys (for HyDE query expansion)
 ANTHROPIC_API_KEY=sk-ant-...
 OPENAI_API_KEY=sk-...
@@ -314,7 +320,7 @@ PATENT_OPERATION_TIMEOUT=300
 <details>
 <summary><strong>Setting up BigQuery (optional, for patent search)</strong></summary>
 
-BigQuery gives you access to 76M+ worldwide patents. It requires a Google Cloud project with billing enabled (the public patent dataset itself is free to query within BigQuery's free tier).
+BigQuery gives you access to 100M+ worldwide patents. It requires a Google Cloud project with billing enabled (the public patent dataset itself is free to query within BigQuery's free tier).
 
 ```bash
 # 1. Install Google Cloud SDK
@@ -430,7 +436,7 @@ For the complete architecture documentation, development workflows, and troubles
 | Operation | Time | Notes |
 |---|---|---|
 | **MPEP Search** | 50-200ms | Hybrid FAISS + BM25 |
-| **BigQuery Patent Search** | 1-3 sec | 76M+ patents |
+| **BigQuery Patent Search** | 1-3 sec | 100M+ patents |
 | **USPTO API** | 500ms - 2s | Rate-limited by USPTO |
 | **Index Build (GPU)** | 3-5 min | NVIDIA CUDA 12.8 |
 | **Index Build (Apple Silicon)** | 8-12 min | MPS acceleration |
@@ -483,7 +489,7 @@ If you're coming from the development side and patent terminology is new (or vic
 
 - [ ] Complete implementation of all MCP tools
 - [ ] Evaluation metrics for RAG search performance
-- [ ] Support for international patent offices (EPO, WIPO)
+- [x] Support for international patent offices (EPO, WIPO/PCT)
 - [ ] Web interface for non-Claude Code users
 - [ ] Claim dependency graph visualization
 - [ ] Automated obviousness analysis (35 USC 103)
@@ -508,7 +514,7 @@ This project builds on excellent open source work: [FastMCP](https://github.com/
 
 ### Data Sources
 
-MPEP, 35 USC, and 37 CFR are published by the USPTO. Patent data comes from Google BigQuery's `patents-public-data` dataset (76M+ patents). Embedding models are [BGE-base-en-v1.5](https://huggingface.co/BAAI/bge-base-en-v1.5) (BAAI) and [MS-MARCO MiniLM-L-6-v2](https://huggingface.co/cross-encoder/ms-marco-MiniLM-L-6-v2) (Microsoft).
+MPEP, 35 USC, and 37 CFR are published by the USPTO. Patent data comes from Google BigQuery's `patents-public-data` dataset (100M+ patents). Embedding models are [BGE-base-en-v1.5](https://huggingface.co/BAAI/bge-base-en-v1.5) (BAAI) and [MS-MARCO MiniLM-L-6-v2](https://huggingface.co/cross-encoder/ms-marco-MiniLM-L-6-v2) (Microsoft).
 
 ### Trademark Notice
 

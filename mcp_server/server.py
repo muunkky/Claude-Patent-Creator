@@ -498,6 +498,12 @@ def _parse_args():
         "--download-updates", action="store_true", help="Download Subsequent Publications"
     )
     parser.add_argument(
+        "--download-epo", action="store_true", help="Download EPO sources (EPC + EPO Guidelines)"
+    )
+    parser.add_argument(
+        "--download-pct", action="store_true", help="Download PCT sources (Treaty + Rules + Guidelines)"
+    )
+    parser.add_argument(
         "--mpep-url", type=str, default=MPEP_DOWNLOAD_URL, help="Custom MPEP download URL"
     )
     parser.add_argument("--no-hyde", action="store_true", help="Disable HyDE query expansion")
@@ -527,30 +533,59 @@ def _handle_mpep_download(mpep_url):
 
 
 def _handle_additional_downloads(args):
-    """Handle downloads for 35 USC, 37 CFR, and Subsequent Publications"""
+    """Handle downloads for 35 USC, 37 CFR, Subsequent Publications, EPO, and PCT"""
     sources_status = check_all_sources()
     downloads_performed = []
 
+    # US sources — skip download if file already present
     if args.download_all or args.download_statutes:
         if sources_status["35_usc"]:
-            print(f"\n35 USC already exists at {MPEP_DIR / USC_35_FILE}", file=sys.stderr)
-        if download_35_usc():
+            print(f"\n[OK] 35 USC already exists at {MPEP_DIR / USC_35_FILE}", file=sys.stderr)
+        elif download_35_usc():
             downloads_performed.append("35 USC")
 
     if args.download_all or args.download_regulations:
         if sources_status["37_cfr"]:
-            print(f"\n37 CFR already exists at {MPEP_DIR / CFR_37_FILE}", file=sys.stderr)
-        if download_37_cfr():
+            print(f"\n[OK] 37 CFR already exists at {MPEP_DIR / CFR_37_FILE}", file=sys.stderr)
+        elif download_37_cfr():
             downloads_performed.append("37 CFR")
 
     if args.download_all or args.download_updates:
         if sources_status["subsequent_pubs"]:
             print(
-                f"\nSubsequent Publications already exists at {MPEP_DIR / SUBSEQUENT_PUBS_FILE}",
+                f"\n[OK] Subsequent Publications already exists at {MPEP_DIR / SUBSEQUENT_PUBS_FILE}",
                 file=sys.stderr,
             )
-        if download_subsequent_publications():
+        elif download_subsequent_publications():
             downloads_performed.append("Subsequent Publications")
+
+    # EPO sources (epo_downloaders skips existing files internally)
+    if args.download_all or args.download_epo:
+        from epo_downloaders import check_epo_pct_sources, download_all_epo_documents
+
+        epo_status = check_epo_pct_sources(MPEP_DIR)
+        if epo_status.get("epc") and epo_status.get("epo_guidelines"):
+            print("\n[OK] EPO sources already present", file=sys.stderr)
+        else:
+            print("\nDownloading EPO sources...", file=sys.stderr)
+            epo_results = download_all_epo_documents(MPEP_DIR)
+            for name, success in epo_results.items():
+                if success:
+                    downloads_performed.append(f"EPO:{name}")
+
+    # PCT sources (epo_downloaders skips existing files internally)
+    if args.download_all or args.download_pct:
+        from epo_downloaders import check_epo_pct_sources as _check_pct, download_all_pct_documents
+
+        pct_status = _check_pct(MPEP_DIR)
+        if pct_status.get("pct_treaty") and pct_status.get("pct_rules"):
+            print("\n[OK] PCT sources already present", file=sys.stderr)
+        else:
+            print("\nDownloading PCT sources...", file=sys.stderr)
+            pct_results = download_all_pct_documents(MPEP_DIR)
+            for name, success in pct_results.items():
+                if success:
+                    downloads_performed.append(f"PCT:{name}")
 
     if downloads_performed:
         print(f"\n[OK] Successfully downloaded: {', '.join(downloads_performed)}", file=sys.stderr)
@@ -561,11 +596,22 @@ def _handle_additional_downloads(args):
     else:
         print("\n[OK] All requested sources already present", file=sys.stderr)
 
+    # Refresh status after downloads
+    sources_status = check_all_sources()
+
     print("\nCurrent source status:", file=sys.stderr)
+    print("  --- US Sources ---", file=sys.stderr)
     print(f"  MPEP PDFs: {'[OK]' if sources_status['mpep'] else '[X]'}", file=sys.stderr)
     print(f"  35 USC:    {'[OK]' if sources_status['35_usc'] else '[X]'}", file=sys.stderr)
     print(f"  37 CFR:    {'[OK]' if sources_status['37_cfr'] else '[X]'}", file=sys.stderr)
     print(f"  Updates:   {'[OK]' if sources_status['subsequent_pubs'] else '[X]'}", file=sys.stderr)
+    print("  --- EPO Sources ---", file=sys.stderr)
+    print(f"  EPC:       {'[OK]' if sources_status.get('epc') else '[X]'}", file=sys.stderr)
+    print(f"  EPO Guide: {'[OK]' if sources_status.get('epo_guidelines') else '[X]'}", file=sys.stderr)
+    print("  --- PCT Sources ---", file=sys.stderr)
+    print(f"  PCT Treaty:{'[OK]' if sources_status.get('pct_treaty') else '[X]'}", file=sys.stderr)
+    print(f"  PCT Rules: {'[OK]' if sources_status.get('pct_rules') else '[X]'}", file=sys.stderr)
+    print(f"  PCT Guide: {'[OK]' if sources_status.get('pct_guidelines') else '[X]'}", file=sys.stderr)
     sys.exit(0)
 
 
@@ -676,6 +722,8 @@ def main():
         or args.download_statutes
         or args.download_regulations
         or args.download_updates
+        or args.download_epo
+        or args.download_pct
     ):
         _handle_additional_downloads(args)
 

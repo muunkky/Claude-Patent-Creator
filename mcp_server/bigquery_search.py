@@ -252,6 +252,11 @@ class BigQueryPatentSearch:
             search_conditions.append("LOWER(abstract_localized[SAFE_OFFSET(0)].text) LIKE @query")
         if "title" in search_fields:
             search_conditions.append("LOWER(title_localized[SAFE_OFFSET(0)].text) LIKE @query")
+        # INTENTIONAL: claims_localized and description_localized contain data
+        # for US publications ONLY (per Google's official schema docs at
+        # github.com/google/patents-public-data). Non-US rows have NULL in these
+        # fields, so querying them wastes BigQuery quota and returns nothing.
+        # For EP/WO full-text claims, use the EPO OPS API (epo_api.py).
         if "claims" in search_fields and country == "US":
             search_conditions.append("LOWER(claims_localized[SAFE_OFFSET(0)].text) LIKE @query")
 
