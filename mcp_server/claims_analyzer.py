@@ -166,23 +166,18 @@ class ClaimsAnalyzer(BaseAnalyzer):
 
         All findings are marked LOW confidence and require manual verification.
         """
-        # DISABLED: Antecedent basis checking has ~0% precision (all false positives)
-        # See review.md for detailed analysis
+        # Antecedent basis checking is opt-in via environment variable.
+        # Known limitations (see PEDANTIC dataset, arxiv.org/html/2505.21342):
+        # - Regex approach cannot parse claim structure (preamble vs body vs wherein)
+        # - Cannot track antecedent scope across limitations
+        # - ML approaches (DeBERTa) achieve only ~14.5% F1 on real USPTO rejections
+        # - High false positive rate is inherent to pattern-matching approaches
         #
-        # The current implementation cannot:
-        # 1. Understand claim structure (preamble -> body -> wherein clauses)
-        # 2. Track antecedent scope across limitations
-        # 3. Recognize USPTO claim drafting conventions
-        # 4. Distinguish first mention "a/an" from subsequent "the" references
-        #
-        # Until a semantic parser is implemented, this check is disabled to avoid
-        # creating unnecessary work filtering false positives.
-        #
-        # To re-enable: Set ENABLE_ANTECEDENT_BASIS_CHECK = True below
+        # When enabled, all findings are emitted at LOW confidence requiring manual review.
+        # Enable with: PATENT_ENABLE_ANTECEDENT_CHECK=1
+        import os
 
-        enable_antecedent_basis_check = False
-
-        if not enable_antecedent_basis_check:
+        if not os.environ.get("PATENT_ENABLE_ANTECEDENT_CHECK", "").strip() in ("1", "true", "yes"):
             return
 
         claim_text = claim["text"]

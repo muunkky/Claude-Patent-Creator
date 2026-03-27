@@ -154,24 +154,23 @@ class LazyMPEPIndex:
     """
 
     def __init__(self, use_hyde: bool = True):
-        object.__setattr__(self, "_instance", None)
-        object.__setattr__(self, "_use_hyde", use_hyde)
+        # Use __dict__ directly to avoid triggering __getattr__ during init
+        self.__dict__["_instance"] = None
+        self.__dict__["_use_hyde"] = use_hyde
 
     def _load(self):
         import time
 
-        instance = object.__getattribute__(self, "_instance")
-        if instance is not None:
-            return instance
+        if self.__dict__["_instance"] is not None:
+            return self.__dict__["_instance"]
 
         _log_info("LazyMPEPIndex: Loading MPEP index (first use)...")
         start = time.time()
-        use_hyde = object.__getattribute__(self, "_use_hyde")
-        instance = MPEPIndex(use_hyde=use_hyde)
+        instance = MPEPIndex(use_hyde=self.__dict__["_use_hyde"])
         instance.build_index(force_rebuild=False)
         elapsed = time.time() - start
         _log_info(f"LazyMPEPIndex: Ready in {elapsed:.1f}s")
-        object.__setattr__(self, "_instance", instance)
+        self.__dict__["_instance"] = instance
         return instance
 
     def __getattr__(self, name):
@@ -662,7 +661,14 @@ def _run_health_checks():
 
 
 def _auto_copy_claude_config():
-    """Automatically copy .claude config to current working directory if not present"""
+    """Automatically copy .claude config to current working directory if not present.
+
+    Can be disabled by setting PATENT_CREATOR_NO_AUTO_COPY=1 in the environment.
+    """
+    if os.environ.get("PATENT_CREATOR_NO_AUTO_COPY", "").strip() in ("1", "true", "yes"):
+        _log_info("Auto-copy disabled via PATENT_CREATOR_NO_AUTO_COPY")
+        return
+
     try:
         cwd = Path.cwd().resolve()
         dest_claude = cwd / ".claude"
