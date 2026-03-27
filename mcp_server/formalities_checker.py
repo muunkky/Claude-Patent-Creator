@@ -122,6 +122,10 @@ class FormalitiesChecker(BaseAnalyzer):
             results["sections"] = self._check_specification_sections(specification)
             results["drawings"] = self._check_drawing_references(specification, drawings_present)
 
+        # Cross-document consistency checks
+        if abstract and title:
+            self._check_abstract_title_overlap(abstract, title)
+
         return {
             "results": results,
             "issues": [self._issue_to_dict(issue) for issue in self.issues],
@@ -402,7 +406,135 @@ class FormalitiesChecker(BaseAnalyzer):
                 result["compliant"] = False
                 result["issues"].append("Missing figure description section")
 
+        # Check reference numeral coverage for each figure
+        if referenced_figures and specification:
+            numeral_issues = self._check_figure_numeral_coverage(specification, referenced_figures)
+            for issue in numeral_issues:
+                self.issues.append(issue)
+                result["issues"].append(issue.problem)
+            if numeral_issues:
+                result["compliant"] = False
+
         return result
+
+    def _check_figure_numeral_coverage(
+        self, specification: str, referenced_figures: set
+    ) -> list:
+        """Check that each referenced figure has its numerals discussed in the detailed description.
+
+        Per 37 CFR 1.84(p): Reference characters not mentioned in the description
+        shall not appear in the drawings, and vice versa.
+        """
+        issues = []
+
+        # Find the detailed description section
+        detail_match = re.search(
+            r"(?i)DETAILED\s+DESCRIPTION",
+            specification,
+        )
+        if not detail_match:
+            return issues  # Can't validate without detailed description
+
+        detailed_text = specification[detail_match.start():]
+
+        # For each figure, check if any reference numerals are discussed
+        # Look for patterns like "Referring to FIG. N" followed by numeral references
+        for fig_num in sorted(referenced_figures):
+            # Find sections that discuss this figure
+            fig_ref_pattern = re.compile(
+                rf"(?i)(?:Referring\s+to|shown\s+in|illustrated\s+in|depicted\s+in|see)\s+"
+                rf"FIG(?:URE)?\.?\s*{re.escape(fig_num)}\b",
+            )
+
+            # Also check for "FIG. N" appearing with numerals nearby
+            fig_mention_pattern = re.compile(
+                rf"(?i)FIG(?:URE)?\.?\s*{re.escape(fig_num)}\b"
+            )
+
+            fig_mentions = list(fig_mention_pattern.finditer(detailed_text))
+
+            if not fig_mentions:
+                # Figure referenced in Brief Description but never discussed in Detailed Description
+                issues.append(
+                    FormalityIssue(
+                        section="drawings",
+                        severity="WARNING",
+                        problem=f"FIG. {fig_num} referenced in Brief Description but not discussed in Detailed Description",
+                        current_value=f"FIG. {fig_num} has no discussion",
+                        required_value="Each figure should be discussed in the Detailed Description with its reference numerals",
+                        fix=f"Add a section in the Detailed Description discussing FIG. {fig_num} and its reference numerals",
+                        legal_ref="37 CFR 1.84(p)",
+                    )
+                )
+            else:
+                # Figure is mentioned -- check if any reference numerals appear nearby
+                has_numerals = False
+                for mention in fig_mentions:
+                    # Look in a window of ~500 chars after the figure mention
+                    window_start = mention.start()
+                    window_end = min(mention.end() + 500, len(detailed_text))
+                    window_text = detailed_text[window_start:window_end]
+
+                    # Check for reference numeral patterns (2-4 digit numbers used as element refs)
+                    numeral_pattern = re.compile(
+                        r"\b(?:element|component|module|system|device|unit|block|step|interface|"
+                        r"engine|manager|entry|field|scope|layer|endpoint|queue|mark|panel|"
+                        r"button|area|section|view|card|loop|method)\s+(\d{2,4})\b"
+                        r"|\b(\d{2,4})\s*(?:\([a-z]\))?(?:\s*,\s*\d{2,4})*\b",
+                        re.IGNORECASE,
+                    )
+                    if numeral_pattern.search(window_text):
+                        has_numerals = True
+                        break
+
+                if not has_numerals:
+                    issues.append(
+                        FormalityIssue(
+                            section="drawings",
+                            severity="INFO",
+                            problem=f"FIG. {fig_num} is mentioned but no reference numerals found in its discussion",
+                            current_value=f"FIG. {fig_num} discussion lacks numeral references",
+                            required_value="Reference numerals from the figure should be identified in the text",
+                            fix=f"Add reference numeral descriptions for elements shown in FIG. {fig_num}",
+                            legal_ref="37 CFR 1.84(p)",
+                        )
+                    )
+
+        return issues
+
+    def _check_abstract_title_overlap(self, abstract: str, title: str) -> None:
+        """Warn if the abstract's first sentence substantially repeats the title."""
+        if not abstract or not title:
+            return
+
+        # Extract first sentence of abstract
+        first_sentence_match = re.match(r"([^.!?]+[.!?])", abstract)
+        if not first_sentence_match:
+            return
+
+        first_sentence = first_sentence_match.group(1).lower()
+        title_lower = title.lower()
+
+        # Compute word overlap
+        title_words = set(re.findall(r"\w{3,}", title_lower))  # words 3+ chars
+        sentence_words = set(re.findall(r"\w{3,}", first_sentence))
+
+        if not title_words:
+            return
+
+        overlap = len(title_words & sentence_words) / len(title_words)
+        if overlap > 0.7:
+            self.issues.append(
+                FormalityIssue(
+                    section="abstract",
+                    severity="INFO",
+                    problem="Abstract opening sentence substantially repeats the title",
+                    current_value=f"{overlap:.0%} word overlap with title",
+                    required_value="Abstract should not merely repeat the title (MPEP 608.01(b))",
+                    fix="Rewrite the abstract's first sentence to describe the technical mechanism directly",
+                    legal_ref="MPEP 608.01(b)",
+                )
+            )
 
     def _generate_compliance_summary(self, results: dict) -> dict:
         """Generate overall compliance summary"""

@@ -1,11 +1,11 @@
 ---
-description: Configure Google BigQuery authentication for patent search (76M+ patents)
+description: Configure Google BigQuery authentication for patent search (100M+ patents)
 allowed-tools: Bash
 ---
 
 # Configure BigQuery Authentication
 
-Set up Google Cloud authentication to enable patent search across 76M+ worldwide patents.
+Set up Google Cloud authentication to enable patent search across 100M+ worldwide patents.
 
 ## Instructions
 

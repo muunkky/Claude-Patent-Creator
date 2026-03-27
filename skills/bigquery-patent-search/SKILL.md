@@ -23,7 +23,7 @@ Invoke this skill when users ask to:
 
 Provides access to Google's public patent dataset:
 
-1. **Keyword Search** across 76M+ patents:
+1. **Keyword Search** across 100M+ patents:
    - Full-text search of titles, abstracts, claims
    - Filter by country (US, EP, JP, CN, etc.)
    - Filter by filing/grant date ranges
@@ -107,7 +107,7 @@ When this skill is invoked:
 ## BigQuery Dataset
 
 Uses `patents-public-data.patents` on Google BigQuery:
-- **76M+ worldwide patents**
+- **100M+ worldwide patents**
 - **12M+ US patents** with full text
 - Updated weekly
 - Free to query (no billing for reasonable usage)

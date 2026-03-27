@@ -1,13 +1,13 @@
 ---
 name: patent-search
-description: Search 76M+ patents using BigQuery (fast, zero setup) or PatentsView API (US patents with rich metadata).
+description: Search 100M+ patents using BigQuery (fast, zero setup) or PatentsView API (US patents with rich metadata).
 ---
 
 # Patent Search Skill
 
 Two powerful patent search methods:
 
-1. **BigQuery Search** (Recommended) - 76M+ worldwide patents, zero local storage
+1. **BigQuery Search** (Recommended) - 100M+ worldwide patents, zero local storage
 2. **PatentsView API** - Detailed US patent metadata (inventors, assignees, classifications, citations)
 
 **FOR CLAUDE:** All files and dependencies installed.
@@ -136,7 +136,7 @@ When user requests patent searches:
 
 | Method | Patents | Coverage | Speed | Cost | Storage |
 |--------|---------|----------|-------|------|---------|
-| BigQuery | 76M+ | Worldwide | 3-4s | Free* | 0GB |
+| BigQuery | 100M+ | Worldwide | 3-4s | Free* | 0GB |
 | PatentsView | 9.2M | US only | 1-3s | Free | 0GB |
 
 *Free tier: 1TB queries/month

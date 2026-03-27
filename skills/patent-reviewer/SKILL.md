@@ -30,7 +30,7 @@ Review patent applications for USPTO compliance, analyze claims/specifications/f
 
 ### Patent Search
 
-- `search_patents_bigquery` - Search 76M+ patents
+- `search_patents_bigquery` - Search 100M+ patents
 - `get_patent_bigquery` - Get full patent details
 - `search_patents_by_cpc_bigquery` - Search by CPC classification
 
@@ -124,7 +124,7 @@ get_mpep_section("2173")  # Claim definiteness
 ## Prior Art Integration
 
 ```python
-# BigQuery search (76M+ patents)
+# BigQuery search (100M+ patents)
 search_patents_bigquery(
     query="neural network training",
     country="US",

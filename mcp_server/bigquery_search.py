@@ -171,24 +171,14 @@ class BigQueryPatentSearch:
                 "message": "Set GOOGLE_CLOUD_PROJECT environment variable or configure gcloud auth",
             }
 
-        # Try a simple query to verify access
+        # Verify access using table metadata (no query cost)
         try:
-            query = f"""
-            SELECT COUNT(*) as total
-            FROM `{self.FULL_TABLE_ID}`
-            WHERE country_code = 'US'
-            LIMIT 1
-            """
-            result = self.client.query(query).result(timeout=30)
-            total = 0
-            for row in result:
-                total = row.total
-
+            table = self.client.get_table(self.FULL_TABLE_ID)
             return {
                 "available": True,
                 "project": self.billing_project,
                 "message": "BigQuery patent search ready",
-                "us_patents": total,
+                "total_rows": table.num_rows,
             }
         except Exception as e:
             return {

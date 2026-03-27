@@ -22,7 +22,7 @@ Invoke this skill when users ask to:
 ## What This Skill Does
 
 Implements a professional 7-step prior art search methodology combining:
-- Keyword searches across 76M+ patents (BigQuery)
+- Keyword searches across 100M+ patents (BigQuery)
 - CPC classification searches
 - USPTO API searches
 - Timeline analysis
@@ -201,7 +201,7 @@ older = searcher.search_patents(query, start_year=2015, end_year=2021)
 - Invention: [Brief description]
 - Search Date: [Date]
 - Searcher: Claude Patent Creator
-- Databases: BigQuery (76M+ patents), USPTO API
+- Databases: BigQuery (100M+ patents), USPTO API
 - Time Period: [Year range]
 
 ## Patentability Assessment
@@ -328,7 +328,7 @@ This skill integrates with:
 
 ## Required Data Access
 
-- Google Cloud BigQuery (76M+ patents)
+- Google Cloud BigQuery (100M+ patents)
 - USPTO API (optional, for additional coverage)
 - Internet access for patent retrieval
 

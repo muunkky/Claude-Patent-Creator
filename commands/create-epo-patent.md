@@ -35,7 +35,7 @@ I'll interview you about your invention:
 ### Step 2: Prior Art Search
 
 I'll search for relevant prior art using:
-- **BigQuery** (76M+ worldwide patents, filter country="EP" for EP patents)
+- **BigQuery** (100M+ worldwide patents, filter country="EP" for EP patents)
 - **EPO OPS API** (European patent register, full-text EP documents)
 - **CPC classification** search focused on EPO-heavy technology areas
 

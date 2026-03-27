@@ -25,7 +25,6 @@ from typing import Any
 def register_system_tools(
     mcp,
     mpep_index,
-    patent_corpus_index,
     log_info,
     log_error,
     BEST_PRACTICES_AVAILABLE,
@@ -35,7 +34,6 @@ def register_system_tools(
     Args:
         mcp: FastMCP server instance
         mpep_index: Initialized MPEPIndex for index statistics
-        patent_corpus_index: Patent corpus index instance
         log_info: Logging function for info messages
         log_error: Logging function for error messages
         BEST_PRACTICES_AVAILABLE: Flag indicating if best practices modules are available

@@ -38,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [0.2.0] - 2026-03-22
 
 ### Added
-- BigQuery patent search (76M+ worldwide patents)
+- BigQuery patent search (100M+ worldwide patents)
 - 13 specialized skills for Claude Code
 - 10 autonomous agents for long-running workflows
 - 11 slash commands for common patent tasks

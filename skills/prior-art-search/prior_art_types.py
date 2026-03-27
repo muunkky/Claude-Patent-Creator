@@ -555,7 +555,7 @@ def check_backend_availability() -> dict[str, Any]:
                 "details": {
                     "project": availability.get("project"),
                     "us_patents": availability.get("us_patents"),
-                    "coverage": "76M+ worldwide patents, 12M+ US patents",
+                    "coverage": "100M+ worldwide patents, 12M+ US patents",
                 },
             }
         else:

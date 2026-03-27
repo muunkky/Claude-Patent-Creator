@@ -29,7 +29,7 @@ This subagent has access to all patent creator MCP tools:
 - `get_mpep_section` - Retrieve complete MPEP sections
 
 **Patent Search:**
-- `search_patents_bigquery` - Search 76M+ patents for prior art references
+- `search_patents_bigquery` - Search 100M+ patents for prior art references
 - `get_patent_bigquery` - Get full patent details
 - `search_patents_by_cpc_bigquery` - Search by CPC classification
 

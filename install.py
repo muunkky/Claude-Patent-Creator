@@ -30,7 +30,7 @@ FEATURES:
     [OK] Auto-detects OS (Windows/Linux/macOS) and hardware (GPU)
     [OK] Installs PyTorch with correct CUDA version for NVIDIA GPUs
     [OK] Downloads USPTO examination rules (MPEP, 35 USC, 37 CFR)
-    [OK] Configures BigQuery patent search (76M+ patents, FREE)
+    [OK] Configures BigQuery patent search (100M+ patents, FREE)
     [OK] Registers MCP server with Claude Code automatically
     [OK] Installs Pydantic for input validation
     [OK] Sets up structured logging and performance monitoring
@@ -532,7 +532,7 @@ def download_patent_corpus():
     print_warning("[WARNING] Local corpus indexing takes 24+ hours on RTX 5090 GPU!")
     print_info("")
     print_success("RECOMMENDED: Use Google BigQuery instead")
-    print_info("  * 76M+ worldwide patents (vs 9.2M local)")
+    print_info("  * 100M+ worldwide patents (vs 9.2M local)")
     print_info("  * No indexing required (instant access)")
     print_info("  * Free for typical usage (1TB/month)")
     print_info("  * Full-text search on abstracts, claims, descriptions")
@@ -833,7 +833,7 @@ def main():
 
 {Colors.BOLD}4. Patent Search Tools Available{Colors.ENDC}
    {Colors.OKGREEN}[OK] BigQuery (RECOMMENDED){Colors.ENDC} - search_patents_bigquery
-     * 76M+ worldwide patents, instant access, FREE (1TB/month)
+     * 100M+ worldwide patents, instant access, FREE (1TB/month)
 
    {Colors.OKGREEN}[OK] USPTO API{Colors.ENDC} - search_uspto_api
      * Real-time US patent data, official USPTO source
@@ -898,7 +898,7 @@ def main():
 {Colors.OKCYAN}The Claude Patent Creator is now ready to help you with:
   * USPTO MPEP rule searches
   * Patent application reviews
-  * Prior art searches (76M+ patents via BigQuery)
+  * Prior art searches (100M+ patents via BigQuery)
   * Patent diagrams and flowcharts
   * Complete patent application creation{Colors.ENDC}
 

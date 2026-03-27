@@ -4,6 +4,7 @@ Cross-platform Graphviz installer and helper
 Automatically detects and helps install Graphviz on Windows, macOS, and Linux
 """
 
+import os
 import platform
 import shutil
 import subprocess
@@ -129,6 +130,25 @@ class GraphvizInstaller:
 
         return "\n".join(instructions)
 
+    def _update_path_after_install(self):
+        """Add common Graphviz binary locations to PATH for current process."""
+        candidates = []
+        if self.system == "Windows":
+            candidates = [
+                r"C:\Program Files\Graphviz\bin",
+                r"C:\Program Files (x86)\Graphviz\bin",
+            ]
+        elif self.system == "Darwin":
+            candidates = ["/opt/homebrew/bin", "/usr/local/bin"]
+        elif self.system == "Linux":
+            candidates = ["/usr/local/bin"]
+
+        current_path = os.environ.get("PATH", "")
+        for candidate in candidates:
+            if os.path.isdir(candidate) and candidate not in current_path:
+                os.environ["PATH"] = candidate + os.pathsep + current_path
+                current_path = os.environ["PATH"]
+
     def try_auto_install(self) -> tuple[bool, str]:
         """
         Attempt automatic installation (requires elevated privileges)
@@ -162,9 +182,10 @@ class GraphvizInstaller:
                             print(result.stderr)
 
                         if result.returncode == 0:
+                            self._update_path_after_install()
                             return (
                                 True,
-                                "Installed via winget. Please restart your terminal.",
+                                "Installed via winget.",
                             )
                     except Exception as e:
                         print(f"Winget failed: {e}")
@@ -190,9 +211,10 @@ class GraphvizInstaller:
                             print(result.stderr)
 
                         if result.returncode == 0:
+                            self._update_path_after_install()
                             return (
                                 True,
-                                "Installed via Chocolatey. Please restart your terminal.",
+                                "Installed via Chocolatey.",
                             )
                         else:
                             print("Chocolatey installation failed or was cancelled.")
@@ -210,6 +232,7 @@ class GraphvizInstaller:
                 if shutil.which("brew"):
                     try:
                         subprocess.check_call(["brew", "install", "graphviz"])
+                        self._update_path_after_install()
                         return (True, "Installed via Homebrew")
                     except subprocess.CalledProcessError:
                         return (False, "Homebrew installation failed")
@@ -220,6 +243,7 @@ class GraphvizInstaller:
                 if shutil.which("apt-get"):
                     try:
                         subprocess.check_call(["sudo", "apt-get", "install", "-y", "graphviz"])
+                        self._update_path_after_install()
                         return (True, "Installed via apt")
                     except subprocess.CalledProcessError:
                         return (False, "apt installation failed (may need sudo)")
@@ -228,6 +252,7 @@ class GraphvizInstaller:
                 if shutil.which("dnf"):
                     try:
                         subprocess.check_call(["sudo", "dnf", "install", "-y", "graphviz"])
+                        self._update_path_after_install()
                         return (True, "Installed via dnf")
                     except subprocess.CalledProcessError:
                         return (False, "dnf installation failed (may need sudo)")
@@ -275,7 +300,8 @@ def ensure_graphviz() -> tuple[bool, str]:
         # Return installation instructions
         return (False, installer.get_diagnostic_info())
 
-    # Re-check after installation
+    # Update PATH and re-check after installation
+    installer._update_path_after_install()
     installer.status = installer.check_installation()
     if installer.status["ready"]:
         return (True, message)

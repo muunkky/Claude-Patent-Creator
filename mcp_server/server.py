@@ -105,16 +105,10 @@ except ImportError:
     SpecificationAnalyzer = None
 
 # Import MPEP index from mpep_search module
-try:
-    from mpep_search import MPEPIndex
-except ImportError:
-    from mpep_search import MPEPIndex
+from mpep_search import MPEPIndex
 
 # Import downloaders
-try:
-    from downloaders import FileDownloader
-except ImportError:
-    from downloaders import FileDownloader
+from downloaders import FileDownloader
 
 # Initialize MCP server
 mcp = FastMCP("claude-patent-creator")
@@ -125,6 +119,8 @@ logger = get_logger() if BEST_PRACTICES_AVAILABLE else None  # type: ignore[misc
 # Global variables
 MPEP_DIR = Path(__file__).parent.parent / "pdfs"
 INDEX_DIR = Path(__file__).parent / "index"
+# patent_corpus_index starts as None; prior_art_tools.py lazy-loads it via
+# nonlocal closure when the first prior art tool is invoked.
 patent_corpus_index = None
 mpep_index: Any = None
 
@@ -470,7 +466,6 @@ def _register_all_tools():
     register_system_tools(
         mcp=mcp,
         mpep_index=mpep_index,
-        patent_corpus_index=patent_corpus_index,
         log_info=_log_info,
         log_error=_log_error,
         BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,

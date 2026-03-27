@@ -168,7 +168,7 @@ class SystemHealthChecker:
                     "status": "ready",
                     "ready": True,
                     "project": status.get("project"),
-                    "coverage": "76M+ worldwide patents, 12M+ US patents",
+                    "coverage": "100M+ worldwide patents, 12M+ US patents",
                     "cost": "Free for typical usage (1TB/month)",
                     "details": "Google BigQuery patent search ready",
                     "provides": [

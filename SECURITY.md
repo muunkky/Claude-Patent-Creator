@@ -33,7 +33,7 @@ Use [GitHub Security Advisories](https://github.com/RobThePCGuy/Claude-Patent-Cr
 
 | API | Data Sent | Purpose |
 |-----|-----------|---------|
-| BigQuery | Search queries | Patent search (76M+) |
+| BigQuery | Search queries | Patent search (100M+) |
 | USPTO API | Search queries | Live patent lookup |
 | HuggingFace | Model downloads | Embedding/reranker models (first run only) |
 

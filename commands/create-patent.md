@@ -35,7 +35,7 @@ I'll interview you about your invention:
 
 I'll use the **Patent Researcher** agent to:
 - Conduct systematic 7-step search
-- Search BigQuery (76M+ patents)
+- Search BigQuery (100M+ patents)
 - Identify top 10 most relevant prior art
 - Assess patentability (novelty + obviousness)
 - Recommend claim strategy
@@ -87,14 +87,18 @@ I'll validate the application:
 
 ### Step 7: Assemble Filing Package
 
-I'll create the final package:
-- Specification document (with all sections)
-- Claims document
-- Figures (separate files)
-- Abstract
-- IDS list (prior art for disclosure)
+**IMPORTANT:** Read `skills/setup-assistant/filing-reference.md` before generating any filing instructions. Do NOT estimate fee amounts from memory -- direct the user to the live USPTO fee schedule. All filing is through Patent Center (not EFS-Web). Spec/claims/abstract must be DOCX format.
 
-**Deliverable**: USPTO-ready filing package
+I'll create the final package:
+- Specification document (DOCX format for Patent Center)
+- Claims document (DOCX format)
+- Abstract (DOCX format)
+- Figures (black-and-white line art, PDF, per 37 CFR 1.84)
+- IDS list (U.S. patents/pubs via eIDS -- no copies needed)
+- Filing checklist referencing current Patent Center procedures
+- Verify all reference numerals in figures are discussed in specification (37 CFR 1.84(p))
+
+**Deliverable**: Patent Center filing package
 
 ## Output Structure
 

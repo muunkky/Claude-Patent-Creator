@@ -54,6 +54,7 @@ def register_diagram_tools(
         filename: str = "diagram",
         output_format: str = "svg",
         engine: str = "dot",
+        output_dir: str = "",
     ) -> dict[str, Any]:
         """
         Render a technical diagram from Graphviz DOT code.
@@ -90,11 +91,12 @@ def register_diagram_tools(
             if not status["ready"]:
                 return {
                     "success": False,
-                    "error": "Graphviz not installed. Install with: sudo apt install graphviz && pip install graphviz",
+                    "error": f"Graphviz not installed. {status.get('message', 'See https://graphviz.org/download/')}",
                     "status": status,
                 }
 
-            generator = PatentDiagramGenerator()
+            target_dir = Path(output_dir) if output_dir else Path.cwd() / "diagrams"
+            generator = PatentDiagramGenerator(output_dir=target_dir)
             output_path = generator.render_dot_diagram(
                 dot_code=dot_code,
                 filename=filename,
@@ -115,7 +117,8 @@ def register_diagram_tools(
     @mcp.tool()
     @track_performance("tool_create_flowchart") if BEST_PRACTICES_AVAILABLE else lambda f: f
     def create_flowchart(
-        steps: list[dict[str, Any]], filename: str = "flowchart", output_format: str = "svg"
+        steps: list[dict[str, Any]], filename: str = "flowchart", output_format: str = "svg",
+        output_dir: str = "",
     ) -> dict[str, Any]:
         """
         Create a patent-style flowchart from a list of steps.
@@ -151,10 +154,11 @@ def register_diagram_tools(
             if not status["ready"]:
                 return {
                     "success": False,
-                    "error": "Graphviz not installed. Install with: sudo apt install graphviz && pip install graphviz",
+                    "error": f"Graphviz not installed. {status.get('message', 'See https://graphviz.org/download/')}",
                 }
 
-            generator = PatentDiagramGenerator()
+            target_dir = Path(output_dir) if output_dir else Path.cwd() / "diagrams"
+            generator = PatentDiagramGenerator(output_dir=target_dir)
             output_path = generator.create_flowchart(
                 steps=steps, filename=filename, output_format=output_format
             )
@@ -177,6 +181,7 @@ def register_diagram_tools(
         connections: list[list[str]],
         filename: str = "block_diagram",
         output_format: str = "svg",
+        output_dir: str = "",
     ) -> dict[str, Any]:
         """
         Create a patent-style block diagram showing system components and connections.
@@ -216,7 +221,7 @@ def register_diagram_tools(
             if not status["ready"]:
                 return {
                     "success": False,
-                    "error": "Graphviz not installed. Install with: sudo apt install graphviz && pip install graphviz",
+                    "error": f"Graphviz not installed. {status.get('message', 'See https://graphviz.org/download/')}",
                 }
 
             # Convert connections to tuples with proper typing
@@ -224,7 +229,8 @@ def register_diagram_tools(
                 (conn[0], conn[1], conn[2] if len(conn) > 2 else None) for conn in connections
             ]
 
-            generator = PatentDiagramGenerator()
+            target_dir = Path(output_dir) if output_dir else Path.cwd() / "diagrams"
+            generator = PatentDiagramGenerator(output_dir=target_dir)
             output_path = generator.create_block_diagram(
                 blocks=blocks,
                 connections=connections_tuples,
@@ -335,7 +341,7 @@ def register_diagram_tools(
             if status["ready"]:
                 message = f"Diagram tools ready. Graphviz version {status['version']}"
             elif status["python_package"] and not status["system_command"]:
-                message = "Python package installed but system Graphviz missing. Install with: sudo apt install graphviz"
+                message = f"Python package installed but system Graphviz missing. {status.get('message', 'See https://graphviz.org/download/')}"
             elif not status["python_package"]:
                 message = "Python graphviz package missing. Install with: pip install graphviz"
             else:

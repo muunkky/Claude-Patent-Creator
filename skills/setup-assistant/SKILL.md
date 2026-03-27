@@ -79,22 +79,19 @@ pip install -e .
 
 **Why PyTorch order matters:** If installed after sentence-transformers, you get CPU-only version.
 
-### Phase 4: BigQuery Authentication
+### Phase 4: BigQuery Authentication (Optional)
 
+BigQuery adds 100M+ patent search but is NOT required. MPEP search, claims review, EPO analysis, and all other features work without it.
+
+The setup auto-detects existing gcloud credentials. If already authenticated, BigQuery works automatically.
+
+**If the user wants to enable BigQuery later:**
 ```bash
-# Authenticate
-gcloud auth application-default login \
-  --scopes=https://www.googleapis.com/auth/cloud-platform
-
-# Set project
-gcloud config set project YOUR_PROJECT_ID
-
-# Add to .env
-echo "GOOGLE_CLOUD_PROJECT=YOUR_PROJECT_ID" >> .env
-
-# Test
-python scripts/test_bigquery.py
+# One command — opens browser for Google sign-in (free, no credit card)
+! gcloud auth application-default login
 ```
+
+**Do NOT present BigQuery as a failure or required step.** It is a bonus feature.
 
 ### Phase 5: MCP Server Registration
 
@@ -141,36 +138,28 @@ CLAUDE_CODE_GIT_BASH_PATH=C:\dev\Git\bin\bash.exe
 
 ```bash
 patent-creator health
-
-# Expected:
-# [OK] Python version OK
-# [OK] Dependencies installed
-# [OK] PyTorch with CUDA
-# [OK] MPEP index loaded
-# [OK] BigQuery configured
-# [OK] All systems operational
 ```
 
-### Phase 8: Testing
+### Phase 8: Present Results
 
-```bash
-python scripts/test_install.py
-python scripts/test_gpu.py
-python scripts/test_bigquery.py
-python scripts/test_analyzers.py
+**Setup is complete when MPEP index is built and MCP server is registered.** BigQuery and EPO OPS are optional enhancements.
+
+Present a clean summary table showing what's ready. Do NOT dump manual setup instructions for optional features. The system is fully functional for:
+- MPEP/USC/CFR/EPC/PCT legal search
+- Claims analysis (US + EPO)
+- Specification analysis (US + EPO)
+- Formalities checking (US + EPO + PCT)
+- Patent diagram generation
+- Patent application drafting
+
+If BigQuery is also configured, mention patent search as available. If not, do NOT present it as a failure — just omit it from the "ready" list.
+
+**Test with:**
+```
+"Search MPEP for claim definiteness requirements"
 ```
 
-### Phase 9: First Use Validation
-
-**Test each capability:**
-```
-1. "Search MPEP for claim definiteness requirements"
-2. "Search for patents about neural networks filed in 2024"
-3. "Review these claims: 1. A system comprising..."
-4. "Create a flowchart for user login process"
-```
-
-**If all work -> Setup complete!**
+**If this works -> Setup complete. Tell the user they're ready.**
 
 ## Common Setup Issues
 

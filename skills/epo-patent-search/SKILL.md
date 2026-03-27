@@ -1,6 +1,6 @@
 ---
 name: epo-patent-search
-description: Search European patents using EPO OPS API (full-text, legal status, families) and BigQuery (76M+ patents, EP filter) for prior art, competitive intelligence, and freedom-to-operate analysis
+description: Search European patents using EPO OPS API (full-text, legal status, families) and BigQuery (100M+ patents, EP filter) for prior art, competitive intelligence, and freedom-to-operate analysis
 tools: Bash, Read, Write
 model: sonnet
 ---
@@ -33,7 +33,7 @@ Provides access to European patent data through two methods:
    - Designated contracting states
 
 2. **BigQuery** (Worldwide Patents, EP Filter):
-   - Fast keyword search across 76M+ patents with country="EP"
+   - Fast keyword search across 100M+ patents with country="EP"
    - CPC classification search for EP patents
    - Filing trend analysis
    - Cross-jurisdiction comparison

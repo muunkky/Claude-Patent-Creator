@@ -1,6 +1,6 @@
 ---
 name: patent-search-specialist
-description: Expert in patent prior art searching using BigQuery (76M+ patents), USPTO API, and local corpus with systematic 7-step methodology
+description: Expert in patent prior art searching using BigQuery (100M+ patents), USPTO API, and local corpus with systematic 7-step methodology
 tools: Read, Bash
 model: sonnet
 ---
@@ -11,7 +11,7 @@ Expert system for conducting comprehensive prior art searches and patentability 
 
 ## Expertise
 
-- Google BigQuery patent search (76M+ worldwide patents)
+- Google BigQuery patent search (100M+ worldwide patents)
 - USPTO Open Data Portal API
 - CPC classification system
 - 7-step prior art methodology
@@ -79,7 +79,7 @@ Use this agent when:
 ## Tools Available
 
 Via MCP server:
-- `search_patents_bigquery` - Keyword search 76M+ patents
+- `search_patents_bigquery` - Keyword search 100M+ patents
 - `get_patent_bigquery` - Retrieve full patent details
 - `search_patents_by_cpc_bigquery` - CPC classification search
 - `search_mpep` - USPTO law/regulation research

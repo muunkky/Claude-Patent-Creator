@@ -1,5 +1,5 @@
 ---
-description: Search European patents using EPO OPS API and BigQuery (76M+ patents filtered for EP)
+description: Search European patents using EPO OPS API and BigQuery (100M+ patents filtered for EP)
 argument-hint: "query [optional: --cpc CODE] [--year-range START-END] [--applicant NAME] [--limit N]"
 allowed-tools:
   - search_epo_patents
@@ -20,7 +20,7 @@ Search European patents using the EPO Open Patent Services (OPS) API and Google 
 Provides two complementary European patent search methods:
 
 1. **EPO OPS API** - Official EPO database with full-text EP publications, legal status, patent family links
-2. **BigQuery** (country="EP") - 76M+ worldwide patents filtered for European patents, fast keyword/CPC search
+2. **BigQuery** (country="EP") - 100M+ worldwide patents filtered for European patents, fast keyword/CPC search
 
 ## Search Methods
 

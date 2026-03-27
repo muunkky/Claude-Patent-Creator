@@ -102,54 +102,21 @@ cd ${CLAUDE_PLUGIN_ROOT}
 ${VENV_PYTHON} -m mcp_server.cli health
 ```
 
-### Step 5: Configure BigQuery (Required for patent search)
+### Step 5: Check BigQuery Status (Optional — enhances patent search)
 
-BigQuery provides access to 76M+ patents. It requires a Google Cloud project ID for billing (free tier: 1TB/month, no credit card).
+BigQuery adds 100M+ worldwide patent search. The setup auto-detects existing gcloud credentials.
 
-**Check if the setup output showed a BigQuery warning.** If it said `[WARNING] BigQuery not configured` or `No Google Cloud project ID found`, the user needs to set up a project.
+**If setup output showed `BigQuery: [OK]`** — nothing to do, it works.
 
-**Step 5a: Check gcloud CLI**
-```bash
-gcloud --version 2>&1
+**If BigQuery is not configured** — this is fine. MPEP search, claims review, EPO analysis, and all other features work without it. BigQuery just adds prior art search across 100M+ patents.
+
+If the user wants to enable it later, they can run:
 ```
-
-If not installed, tell the user to install it from https://cloud.google.com/sdk/docs/install
-
-**Step 5b: Authenticate and set project**
-
-Tell the user to run these interactively (requires browser):
-```
-! gcloud auth login
 ! gcloud auth application-default login
 ```
+This opens a browser for Google sign-in. No credit card needed (free tier: 1TB/month).
 
-Then check for existing projects:
-```bash
-gcloud projects list 2>&1
-```
-
-If they have a project, set it:
-```bash
-gcloud config set project PROJECT_ID
-```
-
-If they don't have a project, tell them to create one at https://console.cloud.google.com/projectcreate
-
-**Step 5c: Verify BigQuery works**
-```bash
-cd ${CLAUDE_PLUGIN_ROOT}
-${VENV_PYTHON} -c "from mcp_server.bigquery_search import BigQueryPatentSearch; s = BigQueryPatentSearch(); print(f'BigQuery OK (project: {s.billing_project})')"
-```
-
-If this fails with "No Google Cloud project ID found", the project wasn't set. Create a `.env` file as fallback:
-```bash
-echo "GOOGLE_CLOUD_PROJECT=their-project-id" > ${CLAUDE_PLUGIN_ROOT}/.env
-```
-
-Then create/update `.env` file in `${CLAUDE_PLUGIN_ROOT}`:
-```
-GOOGLE_CLOUD_PROJECT=their-project-id
-```
+**Do NOT present BigQuery setup as a required step or a failure.** The system is fully functional without it.
 
 ## Troubleshooting
 
@@ -191,7 +158,7 @@ gcloud auth application-default login
 The system is ready. Available capabilities:
 
 - `/create-patent` - Create complete patent application
-- `/search-prior-art` - Search 76M+ patents
+- `/search-prior-art` - Search 100M+ patents
 - `/review-claims` - Analyze claims for 112(b) compliance
 - `/review-specification` - Check specification for 112(a) support
 - `/review-formalities` - Verify MPEP 608 formalities

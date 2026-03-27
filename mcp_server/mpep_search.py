@@ -60,18 +60,15 @@ except ImportError:
 try:
     from utils.device import get_device
 except ImportError:
-    try:
-        from utils.device import get_device  # type: ignore[assignment]
-    except ImportError:
-        # Fallback: simple device detection
-        def get_device() -> str:  # type: ignore[misc]
-            """Detect device (GPU/CPU) with fallback"""
-            try:
-                import torch
+    # Fallback: simple device detection
+    def get_device() -> str:  # type: ignore[misc]
+        """Detect device (GPU/CPU) with fallback"""
+        try:
+            import torch
 
-                return "cuda" if torch.cuda.is_available() else "cpu"
-            except ImportError:
-                return "cpu"
+            return "cuda" if torch.cuda.is_available() else "cpu"
+        except ImportError:
+            return "cpu"
 
 
 # Import logging and monitoring with fallback

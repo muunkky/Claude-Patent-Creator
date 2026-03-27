@@ -41,14 +41,20 @@ class HyDEQueryExpander:
             raise ValueError(f"Unknown backend: {backend}")
 
     def _detect_best_backend(self):
-        """Auto-detect the best available backend"""
-        # Try API first (best quality)
-        if os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY"):
-            try:
-                self._init_api_backend()
-                return
-            except Exception:
-                pass
+        """Auto-detect the best available backend.
+
+        API backends require explicit opt-in via HYDE_BACKEND=api env var,
+        because ANTHROPIC_API_KEY is often present in Claude Code environments
+        where using it for HyDE would silently consume API quota.
+        """
+        # Only use API if explicitly opted in (ANTHROPIC_API_KEY alone is not enough)
+        if os.getenv("HYDE_BACKEND", "").lower() == "api":
+            if os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY"):
+                try:
+                    self._init_api_backend()
+                    return
+                except Exception:
+                    pass
 
         # Try local model (good quality, slower)
         try:

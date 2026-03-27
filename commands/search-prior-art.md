@@ -1,5 +1,5 @@
 ---
-description: Conduct comprehensive prior art search using 7-step methodology across 76M+ patents via BigQuery
+description: Conduct comprehensive prior art search using 7-step methodology across 100M+ patents via BigQuery
 allowed-tools: Bash, Read, Write
 ---
 
@@ -58,7 +58,7 @@ password databases.
 
 ### Step 2: Keyword Search
 
-I'll search BigQuery (76M+ patents) using keywords derived from your description:
+I'll search BigQuery (100M+ patents) using keywords derived from your description:
 
 ```python
 # I'll run searches like:
@@ -125,7 +125,7 @@ I'll create a comprehensive report with:
 - Invention: [Description]
 - Searcher: Claude Patent Creator
 - Date: [Date]
-- Databases: BigQuery (76M+ patents)
+- Databases: BigQuery (100M+ patents)
 - Conclusion: [Patentability assessment]
 
 ## Patentability Assessment

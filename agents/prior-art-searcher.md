@@ -26,7 +26,7 @@ DO NOT use when:
 This subagent has access to patent search and MPEP tools:
 
 **Patent Search:**
-- `search_patents_bigquery` - Search 76M+ worldwide patents
+- `search_patents_bigquery` - Search 100M+ worldwide patents
 - `get_patent_bigquery` - Get full patent details
 - `search_patents_by_cpc_bigquery` - Search by CPC classification
 

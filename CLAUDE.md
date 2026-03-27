@@ -107,8 +107,8 @@ Claude will automatically activate specialized skills based on your task. These 
 | **testing-assistant** | Running tests, validation, or quality assurance | Complete test suite execution and validation workflows |
 | **patent-reviewer** | Reviewing patent applications for USPTO compliance | Expert review system with automated compliance checking |
 | **patent-claims-analyzer** | Reviewing claims specifically for 35 USC 112(b) | Deep-dive claims analysis (definiteness, antecedent basis, structure) |
-| **patent-search** | Searching patents, prior art, or competitive intelligence | BigQuery (76M+) and PatentsView API search workflows |
-| **bigquery-patent-search** | Quick BigQuery-only patent searching | Keyword, CPC, and patent detail retrieval across 76M+ patents |
+| **patent-search** | Searching patents, prior art, or competitive intelligence | BigQuery (100M+) and PatentsView API search workflows |
+| **bigquery-patent-search** | Quick BigQuery-only patent searching | Keyword, CPC, and patent detail retrieval across 100M+ patents |
 | **mpep-search** | Finding MPEP sections, statutes, or regulations | Hybrid RAG search across MPEP, 35 USC, 37 CFR |
 | **patent-diagram-generator** | Creating technical diagrams for patents | Graphviz-based diagram generation |
 | **patent-application-creator** | Drafting patent applications interactively | Guided end-to-end creation (prior art, claims, spec, diagrams, compliance) |
@@ -118,7 +118,7 @@ Claude will automatically activate specialized skills based on your task. These 
 | **pct-application** | Preparing PCT international applications | PCT Rules 5-12 compliance, unity of invention |
 | **epc-search** | Searching EPC, EPO Guidelines, PCT rules | `search_patent_law` with jurisdiction filtering |
 
-Each skill includes detailed reference documentation in `skills/[skill-name]/reference/` directories.
+Each skill includes its reference documentation in `skills/[skill-name]/SKILL.md`.
 
 ---
 
@@ -424,7 +424,7 @@ CLAUDE_CODE_GIT_BASH_PATH=C:\dev\Git\bin\bash.exe
 | **NumPy** | 1.26.0 | <3.0 | latest | numpy 2.x supported with faiss-cpu >=1.13.0 |
 | **faiss-cpu** | 1.13.0 | latest | 1.13.2 | numpy 2.x support added in 1.13.0 |
 | **Pydantic** | 2.10.0 | latest | 2.10.0+ | V2 required |
-| **google-cloud-bigquery** | 3.38.0 | latest | 3.38.0+ | Patent search (76M+) |
+| **google-cloud-bigquery** | 3.38.0 | latest | 3.38.0+ | Patent search (100M+) |
 | **anthropic** | 0.72.1 | latest | 0.72.1+ | Claude API (optional) |
 | **openai** | 2.8.0 | latest | 2.8.0+ | OpenAI API (optional) |
 

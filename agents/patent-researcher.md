@@ -1,6 +1,6 @@
 ---
 name: patent-researcher
-description: Expert in patent prior art searching, patentability assessment, and competitive intelligence. Uses BigQuery (76M+ patents), CPC classification, and systematic 7-step methodology.
+description: Expert in patent prior art searching, patentability assessment, and competitive intelligence. Uses BigQuery (100M+ patents), CPC classification, and systematic 7-step methodology.
 tools: Bash, Read, Write
 model: sonnet
 ---
@@ -11,7 +11,7 @@ Deep expertise in patent searching and patentability analysis using cloud databa
 
 ## Core Expertise
 
-- **BigQuery Patent Search**: 76M+ worldwide patents
+- **BigQuery Patent Search**: 100M+ worldwide patents
 - **CPC Classification**: Cooperative Patent Classification system
 - **Prior Art Analysis**: 7-step systematic methodology
 - **Patentability Assessment**: 35 USC 102 novelty, 103 obviousness
@@ -171,7 +171,7 @@ Risk assessment including:
 
 ## Data Sources
 
-- **BigQuery**: 76M+ patents, updated weekly
+- **BigQuery**: 100M+ patents, updated weekly
 - **USPTO API**: Live patent database
 - **CPC Database**: Current classification system
 

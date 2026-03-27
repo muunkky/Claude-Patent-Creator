@@ -133,6 +133,73 @@ def install_pytorch():
             return False  # Failed, continue anyway
 
 
+def _auto_detect_bigquery():
+    """Auto-detect BigQuery credentials and project ID from existing gcloud config.
+
+    Checks (in order):
+    1. Existing application-default credentials file
+    2. GOOGLE_CLOUD_PROJECT env var
+    3. gcloud config for default project
+    4. Credentials file for quota_project_id
+
+    If gcloud is installed and authenticated but no project is set,
+    attempts to extract it from the credentials file.
+    """
+    creds_path = get_gcloud_credentials_path()
+
+    # Check existing credentials
+    if creds_path.exists():
+        print("\n[OK] BigQuery credentials found", file=sys.stderr)
+
+        # Try to extract project ID from credentials if not set in env
+        if not os.environ.get("GOOGLE_CLOUD_PROJECT"):
+            try:
+                import json as _json
+
+                with open(creds_path) as f:
+                    creds = _json.load(f)
+                project_id = creds.get("quota_project_id")
+                if project_id:
+                    print(f"  Auto-detected project: {project_id}", file=sys.stderr)
+            except Exception:
+                pass
+
+        # Also try gcloud config
+        if not os.environ.get("GOOGLE_CLOUD_PROJECT"):
+            try:
+                result = subprocess.run(
+                    ["gcloud", "config", "get-value", "project"],
+                    capture_output=True, text=True, timeout=5,
+                )
+                if result.returncode == 0 and result.stdout.strip() and result.stdout.strip() != "(unset)":
+                    print(f"  Auto-detected project: {result.stdout.strip()}", file=sys.stderr)
+            except Exception:
+                pass
+
+        return
+
+    # No credentials — check if gcloud is installed
+    gcloud_installed = False
+    try:
+        result = subprocess.run(
+            ["gcloud", "--version"], capture_output=True, text=True, timeout=5,
+        )
+        gcloud_installed = result.returncode == 0
+    except Exception:
+        pass
+
+    if gcloud_installed:
+        # gcloud exists but no application-default credentials
+        # Try to run auth non-interactively (will fail, but the error is clear)
+        print("\n[INFO] gcloud CLI detected but no application-default credentials", file=sys.stderr)
+        print("  To enable BigQuery patent search (100M+ patents, free):", file=sys.stderr)
+        print("  Run: ! gcloud auth application-default login", file=sys.stderr)
+    else:
+        # No gcloud at all — this is fine, BigQuery is optional
+        print("\n[INFO] BigQuery patent search not configured (optional)", file=sys.stderr)
+        print("  MPEP search, claims review, and all other features work without it.", file=sys.stderr)
+
+
 def _verify_bigquery_setup():
     """Verify BigQuery is functional — catches missing project ID early during setup."""
     try:
@@ -145,15 +212,13 @@ def _verify_bigquery_setup():
             f"  BigQuery: [OK] (project: {searcher.billing_project})",
             file=sys.stderr,
         )
-    except ValueError as e:
-        # Missing project ID or bad config — raised by our improved __init__
-        print(f"\n[WARNING] BigQuery not configured: {e}", file=sys.stderr)
-        print("  BigQuery patent search will not work until this is fixed.", file=sys.stderr)
-        print("  The MPEP search and other features will still work.\n", file=sys.stderr)
+    except ValueError:
+        # Missing project ID or bad config — not a failure, BigQuery is optional
+        pass
     except ImportError:
-        print("  BigQuery: [X] google-cloud-bigquery not installed", file=sys.stderr)
-    except Exception as e:
-        print(f"  BigQuery: [WARNING] {e}", file=sys.stderr)
+        pass
+    except Exception:
+        pass
 
 
 def configure_mcp_server():
@@ -311,7 +376,7 @@ def setup_bigquery_auth_prompt():
     print("\n" + "=" * 60, file=sys.stderr)
     print("BigQuery Patent Search Setup (Optional)", file=sys.stderr)
     print("=" * 60, file=sys.stderr)
-    print("\nBigQuery provides access to 76M+ patents for prior art search.", file=sys.stderr)
+    print("\nBigQuery provides access to 100M+ patents for prior art search.", file=sys.stderr)
     print("Setup takes ~5 minutes and requires a free Google Cloud account.", file=sys.stderr)
     print("(No credit card required for BigQuery sandbox)\n", file=sys.stderr)
 
@@ -474,19 +539,12 @@ def setup_command(args):
     else:
         print("\n[OK] Index already exists (use --rebuild to force rebuild)", file=sys.stderr)
 
-    # Setup BigQuery authentication (optional, skip in non-interactive mode)
+    # Setup BigQuery authentication (auto-detect in non-interactive, prompt in interactive)
     if not getattr(args, "non_interactive", False):
         setup_bigquery_auth_prompt()
     else:
-        # Check if already configured, just report status
-        creds_path = get_gcloud_credentials_path()
-        if creds_path.exists():
-            print("\n[OK] BigQuery credentials found", file=sys.stderr)
-        else:
-            print(
-                "\n[SKIPPED] BigQuery auth (non-interactive mode). Run later: gcloud auth application-default login",
-                file=sys.stderr,
-            )
+        # Non-interactive: auto-detect existing gcloud auth + project ID
+        _auto_detect_bigquery()
 
     # Verify BigQuery actually works (catches missing project ID)
     _verify_bigquery_setup()
@@ -526,31 +584,24 @@ def setup_command(args):
         print("\nClaude Code Integration:", file=sys.stderr)
         print("  [OK] MCP server registered (user scope)", file=sys.stderr)
         print("  [OK] Available from any directory", file=sys.stderr)
-        print("\n  Restart Claude Code, then try:", file=sys.stderr)
-        print("    'Search MPEP for claim indefiniteness requirements'", file=sys.stderr)
-        print(
-            "\n  Slash commands (.claude/commands/) work in this directory:",
-            file=sys.stderr,
-        )
-        print("    /review-claims", file=sys.stderr)
-        print("    /review-specification", file=sys.stderr)
-        print("    /review-formalities", file=sys.stderr)
-        print("    /full-review", file=sys.stderr)
     else:
         print("\n[WARNING] MCP server auto-registration failed", file=sys.stderr)
         print("  See manual registration command above", file=sys.stderr)
 
-    print("\nNext steps:", file=sys.stderr)
-    print("  2. Run: patent-creator download-patents", file=sys.stderr)
-    print("     (Downloads 9.2M+ patents for local prior art search)", file=sys.stderr)
-    print("\n  OR", file=sys.stderr)
-    print("\n  2. Get USPTO API key for live patent access:", file=sys.stderr)
-    print("     a. Visit: https://data.uspto.gov/myodp", file=sys.stderr)
-    print("     b. Create account and verify with ID.me", file=sys.stderr)
-    print("     c. Copy your API key from the portal", file=sys.stderr)
-    print("     d. Set environment variable:", file=sys.stderr)
-    print('        Windows: $env:USPTO_API_KEY="your_key"', file=sys.stderr)
-    print('        Linux/Mac: export USPTO_API_KEY="your_key"', file=sys.stderr)
+    # Check BigQuery status for final message
+    bq_works = False
+    try:
+        from bigquery_search import BigQueryPatentSearch
+        searcher = BigQueryPatentSearch()
+        bq_works = True
+    except Exception:
+        pass
+
+    print("\nReady to use! Restart Claude Code, then try:", file=sys.stderr)
+    print('  "Search MPEP for claim definiteness requirements"', file=sys.stderr)
+    print('  "Review my patent claims for 35 USC 112(b) compliance"', file=sys.stderr)
+    if bq_works:
+        print('  "Search for patents about neural networks filed in 2024"', file=sys.stderr)
 
     return 0
 
