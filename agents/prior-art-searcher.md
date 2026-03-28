@@ -291,7 +291,7 @@ Reference 1: US-XXXXXXX-XX
   Element B: YES (disclosed in col. 5, lines 5-10)
   Element C: NO (not disclosed)
   Element D: NO (not disclosed)
-  Conclusion: NOT NOVEL if C and D are not essential
+  Preliminary Assessment: NOT NOVEL if C and D are not essential (pending comprehensive search and attorney review)
 
 Reference 2: US-XXXXXXX-XX
   [Similar analysis]
@@ -316,7 +316,7 @@ OBVIOUSNESS ASSESSMENT:
 - Technical Differences: [List unique aspects]
 - Unexpected Results: [List surprising benefits]
 - Combination Barriers: [Note technical challenges]
-- Conclusion: [LIKELY NON-OBVIOUS / POTENTIALLY OBVIOUS]
+- Preliminary Assessment: [LIKELY NON-OBVIOUS / POTENTIALLY OBVIOUS] (based on references found; see Search Limitations)
 ```
 
 **Final Report Structure:**
@@ -347,16 +347,16 @@ PATENTABILITY ASSESSMENT:
 Novelty (35 USC 102):
   - Single Reference Anticipation: NO (no single reference has all elements)
   - Critical Unique Elements: [Elements C, D]
-  - Conclusion: NOVEL
+  - Preliminary Assessment: NOVEL (based on references found in this search)
 
 Obviousness (35 USC 103):
   - Combination Analysis: [Reference 1 + Reference 2 = Elements A, B, C, D]
-  - Would Combination Be Obvious? LIKELY NO
+  - Would Combination Be Obvious? Assessment: LIKELY NO
   - Reasons:
     * Technical Difference: [Specific unique aspect]
     * Unexpected Result: [Surprising benefit]
     * Technical Barrier: [Challenge to combination]
-  - Conclusion: LIKELY NON-OBVIOUS
+  - Preliminary Assessment: LIKELY NON-OBVIOUS (based on references found in this search)
 
 CLAIM STRATEGY RECOMMENDATIONS:
 1. Independent Claim: Cover core invention broadly (Elements A, B, C, D)
@@ -373,6 +373,15 @@ NEXT STEPS:
 
 CONFIDENCE LEVEL: HIGH/MEDIUM/LOW
 [Reasoning for confidence level]
+
+SEARCH LIMITATIONS:
+- This search covered BigQuery patent database (100M+ worldwide patents, updated weekly)
+- NOT searched: non-patent literature (academic papers, white papers, product documentation)
+- NOT searched: unpublished patent applications (18-month publication delay)
+- NOT searched: foreign-language patents without English abstracts
+- NOT searched: trade secrets, proprietary systems, or non-indexed publications
+- Database coverage may have gaps for very recent filings (< 3 months old)
+- This is a preliminary assessment, not a legal opinion. Attorney review recommended before relying on these conclusions for filing decisions.
 ```
 
 **Output:** Complete prior art report (above structure)
@@ -388,9 +397,10 @@ CONFIDENCE LEVEL: HIGH/MEDIUM/LOW
 Deliver comprehensive report with:
 
 1. **Executive Summary**
-   - Novelty conclusion (YES/NO/UNCLEAR)
-   - Obviousness conclusion (LIKELY NON-OBVIOUS/POTENTIALLY OBVIOUS)
-   - Confidence level
+   - Novelty preliminary assessment (YES/NO/UNCLEAR -- pending attorney review)
+   - Obviousness preliminary assessment (LIKELY NON-OBVIOUS/POTENTIALLY OBVIOUS -- pending attorney review)
+   - Confidence level with reasoning
+   - Search limitations summary
    - Critical action items
 
 2. **Search Methodology**
@@ -495,7 +505,8 @@ Report is complete when:
 - [OK] 35 USC 102 analysis complete
 - [OK] 35 USC 103 analysis complete
 - [OK] Claim strategy recommendations provided
-- [OK] Clear patentability conclusion (NOVEL/NOT NOVEL, OBVIOUS/NON-OBVIOUS)
+- [OK] Clear preliminary patentability assessment with confidence reasoning
+- [OK] Search limitations documented
 - [OK] IDS list complete
 
 ## Example Invocation
@@ -512,10 +523,11 @@ Starting Step 1: Invention Definition & Feature Extraction..."
 "Prior art search complete! Here's your patentability report:
 
 EXECUTIVE SUMMARY:
-- Novelty: NOVEL (no single reference has all elements)
-- Obviousness: LIKELY NON-OBVIOUS (unique replay-resistance mechanism)
-- Confidence: HIGH
-- Action: Proceed with patent application
+- Novelty: Preliminary Assessment: NOVEL (no single reference found with all elements)
+- Obviousness: Preliminary Assessment: LIKELY NON-OBVIOUS (unique replay-resistance mechanism)
+- Confidence: HIGH (based on 287 patents reviewed across 3 CPC codes)
+- Search Limitations: Non-patent literature not searched; unpublished applications not covered
+- Action: Consider proceeding with patent application (attorney review recommended)
 
 [Complete report with search methodology, top 10 prior art, 102/103 analysis, claim strategy, and IDS list]
 

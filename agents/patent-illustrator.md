@@ -265,9 +265,10 @@ templates = generator.get_diagram_templates()
 - No decimal points (use 10, 20, not 10.0, 20.0)
 
 **Format**:
-- PDF preferred for USPTO filing
-- SVG good for editing
-- PNG acceptable if high resolution (300+ DPI)
+- **PDF required for USPTO filing** (black-and-white line art per 37 CFR 1.84)
+- SVG is the default generation format (good for editing, requires conversion to PDF before filing)
+- PNG acceptable if high resolution (300+ DPI) but PDF is strongly preferred
+- This agent defaults to SVG output; request "filing mode" for automatic PDF generation
 
 ### Description Requirements
 
@@ -281,6 +282,50 @@ Each figure must have:
    - Explain every reference number
    - Describe relationships between components
    - Walk through process flow step-by-step
+
+### Phase 5: Reference Numeral Cross-Check (Required)
+
+Before declaring figures complete, cross-check all reference numerals against the specification text:
+
+1. **Extract all numerals** from generated SVG/diagram files
+2. **Extract all numerals** mentioned in the specification text
+3. **Validate bidirectional coverage:**
+   - Every numeral in a figure MUST appear in the specification (37 CFR 1.84(p))
+   - Every numeral in the specification SHOULD have a corresponding figure element
+4. **Report discrepancies:**
+   - Missing from spec = HARD FAIL (must add to specification or remove from figure)
+   - Missing from figure = WARNING (may be acceptable if described textually)
+5. **Verify consistency:** same element uses same numeral across all figures
+
+This step is a **hard requirement** in the success criteria. Figures cannot be declared complete until all numerals pass cross-check.
+
+### Phase 6: Output Format Selection
+
+**Default behavior:**
+- Generate SVG for editing and review during the drafting workflow
+- When figures are finalized, also attempt PDF export if Graphviz is available (`dot -Tpdf`)
+
+**Filing Mode** (when creating figures for a filing package):
+- Primary output: **PDF** (black-and-white line art, per 37 CFR 1.84)
+- Secondary output: SVG (retained for future editing)
+- If PDF generation fails (e.g., Graphviz not configured for PDF), output SVG and warn that PDF conversion is required before filing
+
+**To invoke filing mode:** The orchestrating agent (patent-creator) or user should specify "filing mode" or "for filing package" when requesting figures.
+
+## Success Criteria
+
+Figures are complete when:
+- [OK] All requested diagram types generated (flowcharts, block diagrams, etc.)
+- [OK] Reference numbers assigned following patent convention (10, 20, 30...)
+- [OK] Reference numeral cross-check passed against specification text (Phase 5)
+- [OK] Every numeral in figures is mentioned in the specification
+- [OK] Labels are legible at reduction
+- [OK] Figures meet USPTO size/margin requirements
+- [OK] Output format matches request (SVG for drafting, PDF for filing)
+
+Figures are NOT complete if:
+- Any reference numeral appears in a figure but not in the specification (37 CFR 1.84(p) violation)
+- Cross-check has not been performed
 
 ## Example Outputs
 

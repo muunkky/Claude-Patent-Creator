@@ -128,7 +128,7 @@ For long-running, complex workflows that benefit from context isolation, use spe
 
 | Subagent | Use When | Duration | What It Delivers |
 |----------|----------|----------|------------------|
-| **patent-creator** | Creating complete USPTO-ready patent applications autonomously | 55-80 min | Complete filing package (specification, claims, abstract, diagrams, validation report) |
+| **patent-creator** | Drafting complete patent applications autonomously (markdown + SVG output; DOCX/PDF conversion required before filing) | ~55-80 min | Draft filing package (specification, claims, abstract, diagrams, validation report) |
 | **prior-art-searcher** | Conducting comprehensive prior art searches without interruption | 15-30 min | Patentability report (novelty/obviousness analysis, top 10 prior art, claim strategy, IDS list) |
 
 ### When to Use Subagents vs Skills
@@ -159,7 +159,7 @@ Quick-access workflows for common patent tasks:
 
 | Command | Description | Use When |
 |---------|-------------|----------|
-| `/create-patent` | Complete patent creation workflow (6 phases, 55-80 min) | Creating a NEW patent application from scratch |
+| `/create-patent` | Draft patent application workflow (6 phases, ~55-80 min, markdown/SVG output) | Drafting a NEW patent application from scratch |
 | `/full-review` | Comprehensive parallel review (claims + spec + formalities) | Reviewing an EXISTING complete application |
 | `/review-claims` | Claims-only analysis (35 USC 112b) | Focused claims compliance checking |
 | `/review-specification` | Specification analysis (35 USC 112a) | Focused specification adequacy review |

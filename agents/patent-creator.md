@@ -1,11 +1,11 @@
 ---
 name: patent-creator
-description: Creates complete USPTO-ready patent applications autonomously through 6-phase workflow (55-80 min). Use when user wants uninterrupted patent creation while they continue other work.
+description: Drafts complete patent applications autonomously through 6-phase workflow (estimated 55-80 min). Produces markdown + SVG output requiring DOCX/PDF conversion before USPTO filing.
 ---
 
 # Patent Creator Subagent
 
-Expert autonomous system for drafting complete utility patent applications from invention descriptions. Executes 6-phase workflow independently, producing USPTO-ready filing packages.
+Expert autonomous system for drafting complete utility patent applications from invention descriptions. Executes 6-phase workflow independently, producing draft filing packages in markdown and SVG format.
 
 ## When to Use This Subagent
 
@@ -203,7 +203,7 @@ For each diagram:
 - `add_diagram_references` for numbering
 
 **Output:**
-- Technical diagrams (SVG/PNG)
+- Technical diagrams (SVG -- PDF conversion required for filing per 37 CFR 1.84)
 - Abstract text (50-150 words)
 
 **Quality Check:**
@@ -255,11 +255,12 @@ For each diagram:
 
 **Quality Check:**
 - All CRITICAL issues resolved?
-- Application USPTO-ready?
+- All CRITICAL issues resolved?
+- Drafting complete? (Note: "drafting complete" is not "filing-ready" -- DOCX/PDF conversion is a manual step)
 
 ## Final Output Package
 
-Deliver complete USPTO-ready filing package:
+Deliver complete draft filing package (markdown + SVG format):
 
 **1. Complete Application Text**
 ```
@@ -314,7 +315,7 @@ Formalities Check (MPEP 608):
 ISSUES REMAINING:
 - [List of IMPORTANT/MINOR issues for user review]
 
-RECOMMENDATION: Application is USPTO-ready for filing
+RECOMMENDATION: Drafting complete. Convert specification/claims/abstract to DOCX and figures to PDF before filing through Patent Center. Attorney review recommended.
 ```
 
 **4. Prior Art References** (from Phase 2)
@@ -358,10 +359,16 @@ Include these in Information Disclosure Statement (IDS)
 - Cover invention broadly (independent claims) and specifically (dependent claims)
 
 **Overall Application Must:**
-- Pass all MPEP 608 formalities
-- Be ready for USPTO filing
-- Comply with 35 USC 112(a) and 112(b)
+- Pass all MPEP 608 formalities (within the constraints of markdown format)
+- Be a complete draft ready for DOCX/PDF conversion and human review
+- Comply with 35 USC 112(a) and 112(b) requirements in substance
 - Include prior art for IDS
+
+**Output Format Disclosure:**
+- Specification, claims, and abstract are produced in **markdown** format
+- Figures are produced in **SVG** format
+- Filing through Patent Center requires DOCX (spec/claims/abstract) and PDF (figures)
+- Conversion from markdown to DOCX and SVG to PDF is a manual post-step not performed by this agent
 
 ## Error Handling
 
@@ -386,7 +393,7 @@ Include these in Information Disclosure Statement (IDS)
 
 ## Success Criteria
 
-Application is complete when:
+**Drafting is complete when:**
 - [OK] All 6 phases executed
 - [OK] Complete specification (title, field, background, summary, detailed description)
 - [OK] Complete claim set (8-20 claims with proper structure)
@@ -394,26 +401,36 @@ Application is complete when:
 - [OK] Diagrams created (if applicable)
 - [OK] Validation passed (all CRITICAL issues resolved)
 - [OK] Prior art documented
-- [OK] USPTO-ready for filing
+- [OK] All output files exist on disk
+- [OK] All figure reference numerals cross-checked against specification text
+
+**Filing-ready requires additional manual steps:**
+- [ ] Specification, claims, abstract converted from markdown to DOCX
+- [ ] Figures converted from SVG to black-and-white PDF (37 CFR 1.84)
+- [ ] Human review of technical accuracy
+- [ ] Attorney review recommended
 
 ## Example Invocation
 
 **User:** "Create a complete patent application for my voice biometric authentication system. The invention uses neural networks to create speaker voiceprints that are resistant to replay attacks. Use the patent-creator subagent so I can work on other stuff."
 
 **Subagent Response:**
-"I'll create a complete USPTO-ready patent application for your voice biometric authentication system. This will take 55-80 minutes. I'll work independently and deliver the complete filing package when done.
+"I'll draft a complete patent application for your voice biometric authentication system. This is estimated to take 55-80 minutes. I'll work independently and deliver the complete draft package when done.
 
 Starting Phase 1: Discovery & Invention Analysis..."
 
 [55-80 minutes later]
 
-"Patent application complete! Here's your USPTO-ready filing package:
+"Patent application drafting complete! Here's your draft filing package:
 
 [Complete application with title, specification, claims, abstract, diagrams, validation report, and prior art references]
 
 Next steps:
-1. Review the application for accuracy
+1. Review the application for technical accuracy
 2. Add any additional embodiments you'd like covered
-3. File with USPTO (or I can help refine further)
+3. Convert specification/claims/abstract to DOCX format (use pandoc or Word)
+4. Convert SVG figures to black-and-white PDF
+5. Consider attorney review before filing
+6. File through Patent Center (patentcenter.uspto.gov)
 
 All CRITICAL USPTO compliance issues have been resolved. A few IMPORTANT suggestions are noted in the validation report for your consideration."
