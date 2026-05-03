@@ -1,7 +1,5 @@
 """Tests for EPO Specification Analyzer (Art. 83 EPC)."""
 
-import pytest
-
 from mcp_server.epo_specification_analyzer import EPOSpecificationAnalyzer
 
 

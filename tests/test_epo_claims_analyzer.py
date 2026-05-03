@@ -1,7 +1,5 @@
 """Tests for EPO Claims Analyzer (Art. 84 EPC)."""
 
-import pytest
-
 from mcp_server.epo_claims_analyzer import EPOClaimsAnalyzer
 
 

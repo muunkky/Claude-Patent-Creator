@@ -1,7 +1,5 @@
 """Tests verifying US vs EPO analyzer output compatibility."""
 
-import pytest
-
 from mcp_server.claims_analyzer import ClaimsAnalyzer
 from mcp_server.epo_claims_analyzer import EPOClaimsAnalyzer
 

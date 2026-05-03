@@ -122,6 +122,6 @@ else:
 
 print("\nNext steps:")
 print("  1. Download USPTO rules: patent-creator setup")
-print("  2. (Optional) Download patents: patent-creator download-patents")
+print("  2. (Optional) Check BigQuery patent search: patent-creator check-bigquery")
 print("  3. Start using in Claude Code!")
 print("\n" + "=" * 60)

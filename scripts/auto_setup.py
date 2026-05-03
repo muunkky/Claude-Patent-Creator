@@ -158,7 +158,7 @@ def main():
             print("\nYour system is configured to use CPU")
         print("\nNext steps:")
         print("  1. Run: patent-creator setup")
-        print("  2. Run: patent-creator download-patents")
+        print("  2. Optional: run patent-creator check-bigquery")
         return 0
     else:
         print("\n[FAIL] Verification failed!")

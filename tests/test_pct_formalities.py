@@ -1,7 +1,5 @@
 """Tests for PCT Formalities Checker (PCT Rules 5-12)."""
 
-import pytest
-
 from mcp_server.pct_formalities_checker import PCTFormalitiesChecker
 
 

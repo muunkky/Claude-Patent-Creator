@@ -96,6 +96,18 @@ def register_diagram_tools(
             }
         """
         try:
+            validated = validate_input(
+                RenderDiagramInput,
+                dot_code=dot_code,
+                filename=filename,
+                output_format=output_format,
+                engine=engine,
+            )
+            dot_code = validated.dot_code
+            filename = validated.filename
+            output_format = validated.output_format
+            engine = validated.engine
+
             from diagram_generator import (
                 PatentDiagramGenerator,
                 check_graphviz_installed,

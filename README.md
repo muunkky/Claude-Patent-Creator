@@ -188,9 +188,6 @@ patent-creator rebuild-index     # Rebuild the MPEP search index
 patent-creator download-mpep     # Download MPEP PDFs only
 patent-creator download-all      # Download all sources (MPEP + 35 USC + 37 CFR)
 patent-creator check-bigquery    # Test BigQuery connection
-patent-creator download-patents  # Download PatentsView corpus (9.2M+ patents)
-patent-creator build-patent-index # Build patent search index
-patent-creator patents-status    # Show patent corpus status
 ```
 
 ---
@@ -384,12 +381,12 @@ claude mcp add ... -- "C:\Users\YourName\venv\Scripts\python.exe"
 |---|---|---|
 | mcp | >=1.21.0 | MCP server framework |
 | sentence-transformers | >=5.1.2, <6.0.0 | Text embeddings |
-| faiss-cpu | >=1.13.0 | Vector similarity search |
+| faiss-cpu | >=1.13.2 | Vector similarity search |
 | numpy | >=1.26.0, <3.0.0 | Array operations |
 | rank-bm25 | >=0.2.2 | Lexical search |
-| transformers | >=4.57.1, <5.0.0 | HuggingFace models |
-| google-cloud-bigquery | >=3.38.0 | Patent search |
-| pydantic | >=2.10.0 | Data validation |
+| transformers | >=4.57.6, <5.0.0 | HuggingFace models |
+| google-cloud-bigquery | >=3.41.0 | Patent search |
+| pydantic | >=2.12.5 | Data validation |
 | graphviz | >=0.21 | Diagram generation |
 | PyMuPDF | >=1.26.0 | PDF processing |
 

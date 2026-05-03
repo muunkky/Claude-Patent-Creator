@@ -199,7 +199,9 @@ def _verify_bigquery_setup():
 
         searcher = BigQueryPatentSearch()
         # Quick test query to verify end-to-end
-        searcher.client.query("SELECT 1").result(timeout=10)
+        searcher.client.query("SELECT 1", job_config=searcher._make_job_config([])).result(
+            timeout=10
+        )
         print(
             f"  BigQuery: [OK] (project: {searcher.billing_project})",
             file=sys.stderr,

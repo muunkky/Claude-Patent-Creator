@@ -31,7 +31,7 @@ BigQuery on-demand pricing is $6.25 / TiB (1 TiB free per month). The MCP server
 ## Choosing keywords
 
 - 2-3 keywords work better than long phrases (BigQuery `LIKE` matching is literal).
-- For non-US patents, `claims` is empty in the dataset; restrict `search_fields` to `["title", "abstract"]`. For full text on EP/WO, use the EPO OPS tools instead.
+- For non-US patents, `claims` is empty in the dataset; the MCP keyword tool already searches title/abstract for those jurisdictions. For full text on EP/WO, use the EPO OPS tools instead.
 - Use `search_patent_family_bigquery` to bridge from an EP/WO hit to its US family member when you need claims.
 
 ## Common workflows
@@ -42,6 +42,6 @@ BigQuery on-demand pricing is $6.25 / TiB (1 TiB free per month). The MCP server
 3. `search_patents_by_cpc_bigquery(cpc_code=…)` — pull adjacent technology.
 
 **Cross-jurisdiction lookup:**
-1. `search_patents_bigquery(query=…, country="EP", search_fields=["title","abstract"])`.
+1. `search_patents_bigquery(query=…, country="EP")`.
 2. For any EP hit, `get_patent_bigquery` to get its `family_id`.
 3. `search_patent_family_bigquery(family_id=…)` to find the US member with full claims.

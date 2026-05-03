@@ -1,7 +1,5 @@
 """Tests for EPO Formalities Checker (Rules 42-49 EPC)."""
 
-import pytest
-
 from mcp_server.epo_formalities_checker import EPOFormalitiesChecker
 
 
