@@ -4,7 +4,7 @@
     "name": "RobThePCGuy"
   },
   "metadata": {
-    "description": "USPTO patent creation and analysis system with hybrid RAG search, BigQuery access to 76M+ patents, automated compliance checking, prior art search, and diagram generation.",
+    "description": "USPTO patent creation and analysis system with hybrid RAG search, BigQuery access to 100M+ patents, automated compliance checking, prior art search, and diagram generation.",
     "version": "1.0.0"
   },
   "plugins": [

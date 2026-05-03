@@ -38,8 +38,6 @@ def register_epo_analyzer_tools(
     CheckFormalitiesInput,
     track_performance,
     log_operation_result,
-    PYDANTIC_AVAILABLE,
-    BEST_PRACTICES_AVAILABLE,
 ):
     """Register EPO and PCT analyzer tools with the MCP server.
 
@@ -59,19 +57,16 @@ def register_epo_analyzer_tools(
         CheckFormalitiesInput: Pydantic model for formalities check validation
         track_performance: Performance tracking decorator
         log_operation_result: Operation result logging function
-        PYDANTIC_AVAILABLE: Flag indicating if Pydantic is available
-        BEST_PRACTICES_AVAILABLE: Flag indicating if best practices modules are available
     """
 
     @mcp.tool()
-    @track_performance("tool_review_epo_claims") if BEST_PRACTICES_AVAILABLE else lambda f: f
+    @track_performance("tool_review_epo_claims")
     def review_epo_claims(claims_text: str) -> dict[str, Any]:
         """Analyze patent claims for Art. 84 EPC compliance: clarity, conciseness, support, two-part form (Rule 43(1) EPC), and Art. 52(2) excluded subject matter."""
         try:
             # Validate inputs
-            if PYDANTIC_AVAILABLE:
-                validated = validate_input(ReviewClaimsInput, claims_text=claims_text)
-                claims_text = validated.claims_text
+            validated = validate_input(ReviewClaimsInput, claims_text=claims_text)
+            claims_text = validated.claims_text
 
             log_info("review_epo_claims_started", claims_length=len(claims_text))
 
@@ -110,11 +105,7 @@ def register_epo_analyzer_tools(
                     "issues": analysis_results["issues"],
                     "epc_references": epc_refs,
                 }
-                (
-                    log_operation_result("review_epo_claims", total_issues=result["total_issues"])
-                    if BEST_PRACTICES_AVAILABLE
-                    else None
-                )
+                log_operation_result("review_epo_claims", total_issues=result["total_issues"])
                 return result
 
             else:
@@ -148,17 +139,16 @@ def register_epo_analyzer_tools(
             return {"error": f"EPO claims review failed: {str(e)}"}
 
     @mcp.tool()
-    @track_performance("tool_review_epo_specification") if BEST_PRACTICES_AVAILABLE else lambda f: f
+    @track_performance("tool_review_epo_specification")
     def review_epo_specification(claims_text: str, specification: str) -> dict[str, Any]:
         """Analyze specification for Art. 83 EPC sufficiency of disclosure and Rule 42 EPC required sections."""
         try:
             # Validate inputs
-            if PYDANTIC_AVAILABLE:
-                validated = validate_input(
-                    ReviewSpecificationInput, claims_text=claims_text, specification=specification
-                )
-                claims_text = validated.claims_text
-                specification = validated.specification
+            validated = validate_input(
+                ReviewSpecificationInput, claims_text=claims_text, specification=specification
+            )
+            claims_text = validated.claims_text
+            specification = validated.specification
 
             log_info(
                 "review_epo_specification_started",
@@ -208,13 +198,9 @@ def register_epo_analyzer_tools(
                     "issues": analysis_results["issues"],
                     "epc_references": epc_refs,
                 }
-                (
-                    log_operation_result(
+                log_operation_result(
                         "review_epo_specification", total_issues=result["total_issues"]
                     )
-                    if BEST_PRACTICES_AVAILABLE
-                    else None
-                )
                 return result
 
             else:
@@ -248,7 +234,7 @@ def register_epo_analyzer_tools(
             return {"error": f"EPO specification review failed: {str(e)}"}
 
     @mcp.tool()
-    @track_performance("tool_check_epo_formalities") if BEST_PRACTICES_AVAILABLE else lambda f: f
+    @track_performance("tool_check_epo_formalities")
     def check_epo_formalities(
         abstract: Optional[str] = None,
         title: Optional[str] = None,
@@ -258,18 +244,17 @@ def register_epo_analyzer_tools(
         """Check EPO formalities per Rules 42-49 EPC: abstract (Rule 47, <=150 words, reference signs), title (Rule 44), description sections (Rule 42), drawings (Rule 46), and claims fees (Rule 45)."""
         try:
             # Validate inputs
-            if PYDANTIC_AVAILABLE:
-                validated = validate_input(
-                    CheckFormalitiesInput,
-                    abstract=abstract,
-                    title=title,
-                    specification=specification,
-                    drawings_present=drawings_present,
-                )
-                abstract = validated.abstract
-                title = validated.title
-                specification = validated.specification
-                drawings_present = validated.drawings_present
+            validated = validate_input(
+                CheckFormalitiesInput,
+                abstract=abstract,
+                title=title,
+                specification=specification,
+                drawings_present=drawings_present,
+            )
+            abstract = validated.abstract
+            title = validated.title
+            specification = validated.specification
+            drawings_present = validated.drawings_present
 
             log_info(
                 "check_epo_formalities_started",
@@ -319,11 +304,7 @@ def register_epo_analyzer_tools(
                     "issues": analysis_results["issues"],
                     "epc_references": epc_refs,
                 }
-                (
-                    log_operation_result("check_epo_formalities", compliant=result["overall_compliant"])
-                    if BEST_PRACTICES_AVAILABLE
-                    else None
-                )
+                log_operation_result("check_epo_formalities", compliant=result["overall_compliant"])
                 return result
 
             else:
@@ -357,7 +338,7 @@ def register_epo_analyzer_tools(
             return {"error": f"EPO formalities check failed: {str(e)}"}
 
     @mcp.tool()
-    @track_performance("tool_check_pct_formalities") if BEST_PRACTICES_AVAILABLE else lambda f: f
+    @track_performance("tool_check_pct_formalities")
     def check_pct_formalities(
         abstract: Optional[str] = None,
         title: Optional[str] = None,
@@ -367,18 +348,17 @@ def register_epo_analyzer_tools(
         """Check PCT formalities per Rules 5-12: abstract (Rule 8, <=150 words), description (Rule 5), claims (Rule 6), terminology (Rule 10, metric/Celsius), and physical requirements (Rule 11, A4/margins)."""
         try:
             # Validate inputs
-            if PYDANTIC_AVAILABLE:
-                validated = validate_input(
-                    CheckFormalitiesInput,
-                    abstract=abstract,
-                    title=title,
-                    specification=specification,
-                    drawings_present=drawings_present,
-                )
-                abstract = validated.abstract
-                title = validated.title
-                specification = validated.specification
-                drawings_present = validated.drawings_present
+            validated = validate_input(
+                CheckFormalitiesInput,
+                abstract=abstract,
+                title=title,
+                specification=specification,
+                drawings_present=drawings_present,
+            )
+            abstract = validated.abstract
+            title = validated.title
+            specification = validated.specification
+            drawings_present = validated.drawings_present
 
             log_info(
                 "check_pct_formalities_started",
@@ -429,11 +409,7 @@ def register_epo_analyzer_tools(
                     "issues": analysis_results["issues"],
                     "pct_references": pct_refs,
                 }
-                (
-                    log_operation_result("check_pct_formalities", compliant=result["overall_compliant"])
-                    if BEST_PRACTICES_AVAILABLE
-                    else None
-                )
+                log_operation_result("check_pct_formalities", compliant=result["overall_compliant"])
                 return result
 
             else:

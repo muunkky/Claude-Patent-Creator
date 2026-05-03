@@ -20,7 +20,6 @@ _pkg_dir = str(Path(__file__).parent)
 if _pkg_dir not in sys.path:
     sys.path.insert(0, _pkg_dir)
 
-# Import patent corpus management
 # Import hardware detection for PyTorch installation
 import contextlib
 
@@ -28,12 +27,6 @@ from hardware_detect import (
     check_pytorch_installation,
     get_pytorch_install_command,
 )
-from patent_corpus import (
-    PATENT_INDEX_DIR,
-    PatentCorpusDownloader,
-    check_patent_corpus_status,
-)
-from patent_index import PatentCorpusIndex
 
 # Import from server module
 from server import (
@@ -41,7 +34,6 @@ from server import (
     MPEP_DIR,
     MPEP_DOWNLOAD_URL,
     MPEPIndex,
-    _auto_copy_claude_config,
     check_all_sources,
     check_mpep_pdfs,
     download_35_usc,
@@ -621,9 +613,6 @@ def run_server(args):
         )
         return 1
 
-    # Auto-copy .claude configuration to current working directory
-    _auto_copy_claude_config()
-
     print("Starting MCP server...", file=sys.stderr)
 
     # Run the server.py script as a subprocess to ensure clean initialization
@@ -701,168 +690,6 @@ def status_command(args):
 
     if not ready:
         print("\nRun 'patent-creator setup' to complete installation.", file=sys.stderr)
-
-    return 0
-
-
-def download_patents_command(args):
-    """
-    Download PatentsView patent corpus for prior art search
-    """
-    print("\n" + "=" * 60, file=sys.stderr)
-    print("PatentsView Patent Corpus Download", file=sys.stderr)
-    print("=" * 60, file=sys.stderr)
-    print("\nData source: PatentsView (https://patentsview.org)", file=sys.stderr)
-    print("Coverage: 9.2+ million granted patents since 1976", file=sys.stderr)
-
-    downloader = PatentCorpusDownloader()
-
-    # Download patents
-    include_optional = not args.no_optional
-    print("\nDownloading patent corpus...", file=sys.stderr)
-    print(
-        f"Include claims & descriptions: {'Yes' if include_optional else 'No'}",
-        file=sys.stderr,
-    )
-    if args.max_size:
-        print(f"Size limit: {args.max_size} GB", file=sys.stderr)
-
-    success = downloader.download_corpus(
-        include_optional=include_optional, max_size_gb=args.max_size
-    )
-
-    if not success:
-        print("\n[X] Download failed", file=sys.stderr)
-        return 1
-
-    # Show what was downloaded
-    status = check_patent_corpus_status()
-    print(
-        f"\n[OK] Downloaded {status['files_downloaded']} files ({status['total_size_gb']:.2f} GB)",
-        file=sys.stderr,
-    )
-
-    # Build index if requested
-    if args.build_index:
-        print("\n" + "=" * 60, file=sys.stderr)
-        print("Building Patent Corpus Index", file=sys.stderr)
-        print("=" * 60, file=sys.stderr)
-
-        patent_index = PatentCorpusIndex(use_hyde=not args.no_hyde)
-        patent_index.build_index(
-            force_rebuild=True,
-            start_year=getattr(args, "start_year", None),
-            end_year=getattr(args, "end_year", None),
-        )
-
-        print("\n[OK] Patent corpus ready for prior art search", file=sys.stderr)
-    else:
-        print("\nTo build the search index, run:", file=sys.stderr)
-        print("  patent-creator build-patent-index", file=sys.stderr)
-
-    return 0
-
-
-def build_patent_index_command(args):
-    """
-    Build or rebuild patent corpus search index
-    """
-    print("\n" + "=" * 60, file=sys.stderr)
-    print("Building Patent Corpus Index", file=sys.stderr)
-    print("=" * 60, file=sys.stderr)
-
-    # Check if corpus exists
-    status = check_patent_corpus_status()
-    if status["files_downloaded"] == 0:
-        print("\n[X] No patent corpus downloaded", file=sys.stderr)
-        print("Run 'patent-creator download-patents' first", file=sys.stderr)
-        return 1
-
-    print(
-        f"\nFound {status['files_downloaded']} files ({status['total_size_gb']:.2f} GB)",
-        file=sys.stderr,
-    )
-    print(f"Data source: {status['data_source']}", file=sys.stderr)
-
-    # Show year range if specified
-    if args.start_year or args.end_year:
-        year_range = f"{args.start_year or 'earliest'} to {args.end_year or 'latest'}"
-        print(f"\nYear filter: {year_range}", file=sys.stderr)
-        print("Only patents within this range will be indexed", file=sys.stderr)
-
-    # Build index
-    patent_index = PatentCorpusIndex(use_hyde=not args.no_hyde)
-    patent_index.build_index(
-        force_rebuild=args.rebuild, start_year=args.start_year, end_year=args.end_year
-    )
-
-    print("\n[OK] Patent corpus index ready", file=sys.stderr)
-
-    return 0
-
-
-def patents_status_command(args):
-    """
-    Show patent corpus status
-    """
-    print("\n" + "=" * 60, file=sys.stderr)
-    print("Patent Corpus Status", file=sys.stderr)
-    print("=" * 60, file=sys.stderr)
-
-    # GPU Status
-    import torch
-
-    print("\nHardware:", file=sys.stderr)
-    if torch.cuda.is_available():
-        gpu_name = torch.cuda.get_device_name(0)
-        gpu_memory = torch.cuda.get_device_properties(0).total_memory / 1024**3
-        print(f"  GPU:       [OK] {gpu_name}", file=sys.stderr)
-        print(f"  Memory:    {gpu_memory:.1f} GB", file=sys.stderr)
-    else:
-        print("  GPU:       [X] Not available (using CPU)", file=sys.stderr)
-
-    # Check corpus status
-    status = check_patent_corpus_status()
-
-    print(f"\nData Source: {status.get('data_source', 'Unknown')}", file=sys.stderr)
-    print(f"Downloaded Files: {status['files_downloaded']}", file=sys.stderr)
-    print(f"Total Size: {status['total_size_gb']:.2f} GB", file=sys.stderr)
-    print(f"Location: {status['corpus_dir']}", file=sys.stderr)
-
-    # Check index status
-    index_exists = (PATENT_INDEX_DIR / "patent_index.faiss").exists()
-    print(f"\nIndex Built: {'[OK]' if index_exists else '[X]'}", file=sys.stderr)
-
-    if index_exists:
-        metadata_file = PATENT_INDEX_DIR / "patent_metadata.json"
-        if metadata_file.exists():
-            with metadata_file.open(encoding="utf-8") as f:
-                data = json.load(f)
-                num_chunks = len(data["chunks"])
-                num_patents = len({m["patent_id"] for m in data["metadata"]})
-                print(f"  Patents: {num_patents:,}", file=sys.stderr)
-                print(f"  Chunks: {num_chunks:,}", file=sys.stderr)
-
-    print(f"\nIndex Location: {PATENT_INDEX_DIR}", file=sys.stderr)
-
-    # Status summary
-    ready = status["files_downloaded"] > 0 and index_exists
-    print(
-        f"\nStatus: {'Ready for prior art search' if ready else 'Setup required'}",
-        file=sys.stderr,
-    )
-
-    if not ready:
-        if status["files_downloaded"] == 0:
-            print(
-                "\nRun 'patent-creator download-patents' to download corpus",
-                file=sys.stderr,
-            )
-        elif not index_exists:
-            print(
-                "\nRun 'patent-creator build-patent-index' to build search index",
-                file=sys.stderr,
-            )
 
     return 0
 
@@ -1107,11 +934,6 @@ Examples:
   patent-creator download-mpep            # Download MPEP PDFs only
   patent-creator download-all             # Download all sources (MPEP + 35 USC + 37 CFR)
   patent-creator check-bigquery           # Check BigQuery connection
-  patent-creator download-patents         # Download PatentsView corpus (all 9.2M+ patents)
-  patent-creator download-patents --max-size 10  # Limit to 10 GB
-  patent-creator download-patents --no-optional  # Skip claims & descriptions (faster)
-  patent-creator build-patent-index       # Build patent search index
-  patent-creator patents-status           # Show patent corpus status
 
 For more information: https://github.com/RobThePCGuy/Claude-Patent-Creator
         """,
@@ -1167,69 +989,6 @@ For more information: https://github.com/RobThePCGuy/Claude-Patent-Creator
     verify_parser.set_defaults(func=verify_config_command)
 
     # Download patents command
-    download_patents_parser = subparsers.add_parser(
-        "download-patents",
-        help="Download PatentsView patent corpus for prior art search",
-    )
-    download_patents_parser.add_argument(
-        "--no-optional",
-        action="store_true",
-        help="Skip optional large files (claims, descriptions)",
-    )
-    download_patents_parser.add_argument(
-        "--max-size",
-        type=float,
-        default=None,
-        help="Maximum storage in GB (default: unlimited)",
-    )
-    download_patents_parser.add_argument(
-        "--build-index", action="store_true", help="Build search index after download"
-    )
-    download_patents_parser.add_argument(
-        "--no-hyde", action="store_true", help="Disable HyDE query expansion"
-    )
-    download_patents_parser.add_argument(
-        "--start-year",
-        type=int,
-        default=None,
-        help="Only index patents from this year onwards (e.g., 2020)",
-    )
-    download_patents_parser.add_argument(
-        "--end-year",
-        type=int,
-        default=None,
-        help="Only index patents up to this year (e.g., 2025)",
-    )
-    download_patents_parser.set_defaults(func=download_patents_command)
-
-    # Build patent index command
-    build_index_parser = subparsers.add_parser(
-        "build-patent-index", help="Build or rebuild patent corpus search index"
-    )
-    build_index_parser.add_argument("--rebuild", action="store_true", help="Force rebuild of index")
-    build_index_parser.add_argument(
-        "--no-hyde", action="store_true", help="Disable HyDE query expansion"
-    )
-    build_index_parser.add_argument(
-        "--start-year",
-        type=int,
-        default=None,
-        help="Only index patents from this year onwards (e.g., 2020)",
-    )
-    build_index_parser.add_argument(
-        "--end-year",
-        type=int,
-        default=None,
-        help="Only index patents up to this year (e.g., 2025)",
-    )
-    build_index_parser.set_defaults(func=build_patent_index_command)
-
-    # Patents status command
-    patents_status_parser = subparsers.add_parser(
-        "patents-status", help="Show patent corpus status"
-    )
-    patents_status_parser.set_defaults(func=patents_status_command)
-
     args = parser.parse_args()
 
     if not args.command:

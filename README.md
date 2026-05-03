@@ -209,7 +209,6 @@ patent-creator patents-status    # Show patent corpus status
 | `search_uspto_api` | Search via the USPTO API |
 | `get_uspto_patent` | Get patent details from USPTO |
 | `get_recent_uspto_patents` | Pull recent filings |
-| `search_prior_art` | Automated prior art discovery |
 
 ### Analysis
 
@@ -236,10 +235,8 @@ patent-creator patents-status    # Show patent corpus status
 | `get_index_stats` | Search index statistics |
 | `check_bigquery_status` | BigQuery configuration status |
 | `check_diagram_tools_status` | Graphviz availability |
-| `check_patent_corpus_status` | Patent corpus status |
 | `check_uspto_api_status` | USPTO API connectivity |
 | `get_patent_details` | Combined patent retrieval across sources |
-| `setup_claude_config` | Copy .claude configuration (skills, commands) to a project directory |
 
 ---
 
@@ -254,7 +251,7 @@ You don't need to call these directly. Just describe what you want to do and the
 | **setup-assistant** | Installing, configuring, or troubleshooting | Full setup lifecycle guidance |
 | **patent-reviewer** | Reviewing a complete application for compliance | Comprehensive review (claims + spec + formalities) |
 | **patent-claims-analyzer** | Reviewing claims specifically for 35 USC 112(b) | Deep-dive claims analysis (definiteness, antecedent basis, structure) |
-| **patent-search** | Searching patents or prior art | BigQuery + PatentsView API search workflows |
+| **patent-search** | Searching patents or prior art | BigQuery search workflows via the MCP tools |
 | **bigquery-patent-search** | Quick BigQuery-only patent search | Keyword, CPC, and patent detail retrieval across 100M+ patents |
 | **mpep-search** | Finding MPEP sections or regulations | Hybrid RAG search |
 | **patent-diagram-generator** | Creating technical diagrams | Flowcharts, block diagrams, system architectures via Graphviz |
@@ -487,8 +484,6 @@ If you're coming from the development side and patent terminology is new (or vic
 
 ## Roadmap
 
-- [ ] Complete implementation of all MCP tools
-- [ ] Evaluation metrics for RAG search performance
 - [x] Support for international patent offices (EPO, WIPO/PCT)
 - [ ] Web interface for non-Claude Code users
 - [ ] Claim dependency graph visualization

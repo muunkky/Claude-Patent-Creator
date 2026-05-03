@@ -1,12 +1,7 @@
 """
 Prior Art Search Types and Implementation
-Defines data structures for patent prior art search and provides BigQuery-backed search.
-
-This module provides REAL patent search using Google BigQuery Patents Public Data (~72M patents).
-
-Historical context:
-- Based on types from mcp_server/bigquery_search.py and mcp_server/patent_corpus.py
-- Now fully implemented using BigQuery as the backend
+Defines data structures for patent prior art search backed by Google BigQuery
+Patents Public Data (~100M patents worldwide).
 """
 
 import sys
@@ -488,7 +483,8 @@ def search_hybrid_multistage(
     This feature would combine keyword search for broad recall with semantic filtering,
     but is not yet implemented in BigQueryPatentSearch.
 
-    For now, falls back to regular keyword search.
+    Until that lands, this function delegates to keyword search and sets
+    `degraded: True` on the response so the caller knows.
 
     Args:
         query: Search query string
@@ -499,10 +495,11 @@ def search_hybrid_multistage(
         cpc_filter: Filter by CPC classification codes
 
     Returns:
-        Dictionary with search results using fallback keyword search
+        Dictionary with search results plus `degraded` and `degraded_reason`
+        fields so callers can detect that they got keyword search rather
+        than the requested multi-stage retrieval.
     """
-    # Fallback to regular search_prior_art
-    return search_prior_art(
+    response = search_prior_art(
         query=query,
         top_k=top_k,
         country=country,
@@ -511,6 +508,12 @@ def search_hybrid_multistage(
         cpc_filter=cpc_filter,
         search_fields=["title", "abstract", "claims"],
     )
+    response["degraded"] = True
+    response["degraded_reason"] = (
+        "search_hybrid_multistage is not implemented; results returned by "
+        "search_prior_art (keyword only)."
+    )
+    return response
 
 
 def check_backend_availability() -> dict[str, Any]:

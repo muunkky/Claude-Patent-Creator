@@ -109,4 +109,4 @@ Once configured, the USPTO API is used automatically for:
 
 - **International users**: ID.me verification may require additional steps
 - **Privacy**: Queries are sent to USPTO servers
-- **Alternative**: Use [local corpus](PATENTSVIEW_DATA_ACCESS.md) for 100% offline searches
+- **Alternative**: BigQuery patent search covers 100M+ patents worldwide; set `GOOGLE_CLOUD_PROJECT` to use it

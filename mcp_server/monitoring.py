@@ -31,8 +31,11 @@ latency analysis.
 import functools
 import threading
 import time
-from collections import defaultdict
+from collections import defaultdict, deque
 from typing import Any, Callable
+
+# Per-operation ring buffer size for latency samples.
+_DURATION_RING_SIZE = 1024
 
 try:
     from logging_config import get_logger
@@ -48,7 +51,9 @@ class PerformanceMetrics:
     def __init__(self):
         self._lock = threading.Lock()
         self._operation_counts = defaultdict(int)
-        self._operation_durations = defaultdict(list)
+        self._operation_durations: defaultdict[str, deque[float]] = defaultdict(
+            lambda: deque(maxlen=_DURATION_RING_SIZE)
+        )
         self._error_counts = defaultdict(int)
         self._start_time = time.time()
 

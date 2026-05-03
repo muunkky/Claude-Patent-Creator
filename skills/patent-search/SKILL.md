@@ -1,175 +1,47 @@
 ---
 name: patent-search
-description: Search 100M+ patents using BigQuery (fast, zero setup) or PatentsView API (US patents with rich metadata).
+description: Search 100M+ patents via the MCP server's BigQuery tools. No standalone scripts; everything goes through the MCP tools registered by the patent-creator server.
 ---
 
 # Patent Search Skill
 
-Two powerful patent search methods:
+This skill points Claude at the BigQuery patent-search tools registered by the patent-creator MCP server. Call the tools directly; do not shell out to Python.
 
-1. **BigQuery Search** (Recommended) - 100M+ worldwide patents, zero local storage
-2. **PatentsView API** - Detailed US patent metadata (inventors, assignees, classifications, citations)
+## When to use
 
-**FOR CLAUDE:** All files and dependencies installed.
-- Go directly to Quick Test section
-- Script at: `.claude/skills/patent-search/bigquery_search.py`
-- Run from skill directory
-- Windows: Use cmd syntax (dir, set, &&)
+- Find prior art by keyword, classification, or family.
+- Pull full patent records (title, abstract, claims, description) for US patents.
+- Cross-reference an EP/WO patent into its US family member to get full text.
 
-## Quick Test
+## Available MCP tools
 
-```bash
-# Windows
-cd ".claude\skills\patent-search"
-set GOOGLE_APPLICATION_CREDENTIALS=%APPDATA%\\gcloud\\application_default_credentials.json
-python bigquery_search.py search "voice biometric" 5
+| Tool | What it does |
+|------|--------------|
+| `search_patents_bigquery` | Keyword search across abstract / title / claims (US only for claims). |
+| `get_patent_bigquery` | Full patent details by publication number. |
+| `search_patents_by_cpc_bigquery` | Search by CPC classification prefix. |
+| `search_patents_by_ipc_bigquery` | Search by IPC classification prefix (good for older or non-US patents). |
+| `search_patent_family_bigquery` | All publications sharing a family ID across jurisdictions. |
+| `check_bigquery_status` | Verify auth and quota project before a long workflow. |
 
-# Linux/macOS
-cd .claude/skills/patent-search
-export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.config/gcloud/application_default_credentials.json"
-python bigquery_search.py search "voice biometric" 5
-```
+## Cost notes
 
-**Expected:** 5 patent results in ~4 seconds
+BigQuery on-demand pricing is $6.25 / TiB (1 TiB free per month). The MCP server enforces a per-query bytes-billed ceiling, defaulting to 25 GiB. Override via `PATENT_BIGQUERY_MAX_BYTES_BILLED` if you need a larger scan window.
 
-## Quick Start
+## Choosing keywords
 
-### BigQuery Search
+- 2-3 keywords work better than long phrases (BigQuery `LIKE` matching is literal).
+- For non-US patents, `claims` is empty in the dataset; restrict `search_fields` to `["title", "abstract"]`. For full text on EP/WO, use the EPO OPS tools instead.
+- Use `search_patent_family_bigquery` to bridge from an EP/WO hit to its US family member when you need claims.
 
-```bash
-# Keyword search (2-3 keywords for best results)
-python bigquery_search.py search "voice biometric authentication" 20
+## Common workflows
 
-# Get specific patent (hyphenated format: US-XXXXXXX-XX)
-python bigquery_search.py get US-12424224-B2
+**Prior art sweep:**
+1. `search_patents_bigquery(query=…, country="US")` — broad scan.
+2. Pick the top hits' CPC codes from `get_patent_bigquery`.
+3. `search_patents_by_cpc_bigquery(cpc_code=…)` — pull adjacent technology.
 
-# CPC classification search
-python bigquery_search.py cpc G10L 15
-```
-
-
-### PatentsView API
-
-
-## Choosing the Right Method
-
-### Use BigQuery When:
-- Quick keyword search needed
-- Worldwide patents (not just US)
-- Fast results (3-4 seconds)
-- Zero local storage
-- CPC classification search
-- Budget-conscious (free tier: 1TB/month)
-
-### Use PatentsView When:
-- Need detailed US patent metadata
-- Searching by inventor/assignee
-- Citation analysis required
-- Complex boolean queries
-- Exact field matching
-- Patent family analysis
-
-### Combined Workflow
-
-1. Start with BigQuery (broad keyword search)
-2. Identify relevant patents and CPC codes
-3. Switch to PatentsView (detailed metadata/citations)
-4. Export final results
-
-**Example:**
-```bash
-# Step 1: BigQuery broad search
-python bigquery_search.py search "voice biometric authentication" 20
-
-# Step 2: Found CPC G10L17, search more
-python bigquery_search.py cpc G10L17 50
-
-# Step 3: Use PatentsView for inventor/assignee analysis
-```
-
-
-## Instructions for Claude
-
-When user requests patent searches:
-
-1. **Understand Goal**: Technology, time period, prior art vs competitive analysis, US vs worldwide
-2. **Check Dependencies**: Verify BigQuery/PatentsView setup
-3. **Choose Method**: Default BigQuery for broad, PatentsView for detailed
-4. **Optimize Queries**:
-   - BigQuery: 2-3 keywords, simplify if zero results, use CPC codes
-   - PatentsView: Verify API key, construct JSON queries, handle pagination
-5. **Present Results**: Parse JSON, highlight key info, provide Google Patents URLs
-6. **Offer Next Steps**: Suggest refinements, related classifications, citation analysis
-
-
-## Common Use Cases
-
-### Prior Art Search
-1. BigQuery keyword search
-2. Identify CPC codes
-3. BigQuery CPC search
-4. PatentsView citation analysis
-5. Document findings
-
-### Competitive Intelligence
-1. PatentsView search by assignee
-2. Filter by date range
-3. Group by CPC
-4. Identify key inventors
-5. Trend report
-
-### Technology Landscape
-1. BigQuery CPC search worldwide
-2. Analyze by country/date
-3. Identify patent families
-4. PatentsView US details
-5. Summary report
-
-### Freedom to Operate
-1. BigQuery keyword + CPC search
-2. Filter by jurisdiction/active status
-3. PatentsView claim analysis
-4. Review forward citations
-5. Risk assessment
-
-## Performance & Coverage
-
-| Method | Patents | Coverage | Speed | Cost | Storage |
-|--------|---------|----------|-------|------|---------|
-| BigQuery | 100M+ | Worldwide | 3-4s | Free* | 0GB |
-| PatentsView | 9.2M | US only | 1-3s | Free | 0GB |
-
-*Free tier: 1TB queries/month
-
-## Quick Reference
-
-### BigQuery Commands
-
-```bash
-python bigquery_search.py search "query" <limit>
-python bigquery_search.py get <PATENT-NUMBER>
-python bigquery_search.py cpc <CODE> <limit>
-```
-
-### Common CPC Codes
-
-| Code | Technology |
-|------|-----------|
-| G10L | Speech analysis/synthesis |
-| G10L15 | Speech recognition |
-| G10L17 | Speaker recognition/verification |
-| G06F21 | Security arrangements |
-| G06N | Computing models |
-
-### Troubleshooting
-
-**FOR CLAUDE:** Only run diagnostics if Quick Test fails.
-
-| Problem | Solution |
-|---------|----------|
-| BigQuery auth fails | `gcloud auth application-default login` |
-| No module google.cloud | `pip install google-cloud-bigquery db-dtypes` |
-| Zero results | Simplify query (2-3 keywords max) |
-| Patent get fails | Use hyphenated format: `US-XXXXX-XX` |
-| PatentsView 403 | Set API key environment variable |
-| Rate limit (429) | Wait 60 seconds (PatentsView: 45 req/min) |
+**Cross-jurisdiction lookup:**
+1. `search_patents_bigquery(query=…, country="EP", search_fields=["title","abstract"])`.
+2. For any EP hit, `get_patent_bigquery` to get its `family_id`.
+3. `search_patent_family_bigquery(family_id=…)` to find the US member with full claims.

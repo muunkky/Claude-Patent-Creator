@@ -27,8 +27,6 @@ def register_patent_law_tools(
     validate_input,
     SearchPatentLawInput,
     track_performance,
-    PYDANTIC_AVAILABLE,
-    BEST_PRACTICES_AVAILABLE,
 ):
     """Register cross-jurisdiction patent law search tools.
 
@@ -40,8 +38,6 @@ def register_patent_law_tools(
         validate_input: Input validation function
         SearchPatentLawInput: Pydantic model for search validation
         track_performance: Performance tracking decorator
-        PYDANTIC_AVAILABLE: Flag indicating if Pydantic is available
-        BEST_PRACTICES_AVAILABLE: Flag indicating if best practices modules are available
     """
 
     @mcp.tool()
@@ -74,7 +70,7 @@ def register_patent_law_tools(
 
         try:
             # Validate inputs
-            if PYDANTIC_AVAILABLE and SearchPatentLawInput:
+            if SearchPatentLawInput:
                 validated = validate_input(
                     SearchPatentLawInput,
                     query=query,

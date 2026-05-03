@@ -34,8 +34,6 @@ def register_bigquery_tools(
     GetPatentInput,
     CPCSearchInput,
     track_performance,
-    PYDANTIC_AVAILABLE,
-    BEST_PRACTICES_AVAILABLE,
     IPCSearchInput=None,
     FamilySearchInput=None,
 ):
@@ -51,8 +49,6 @@ def register_bigquery_tools(
         GetPatentInput: Pydantic model for get patent validation
         CPCSearchInput: Pydantic model for CPC search validation
         track_performance: Performance tracking decorator
-        PYDANTIC_AVAILABLE: Flag indicating if Pydantic is available
-        BEST_PRACTICES_AVAILABLE: Flag indicating if best practices modules are available
     """
 
     # Thread-safe lazy-loaded BigQuery searcher
@@ -140,20 +136,19 @@ def register_bigquery_tools(
         )
         try:
             # Validate inputs
-            if PYDANTIC_AVAILABLE:
-                validated = validate_input(
-                    SearchBigQueryInput,
-                    query=query,
-                    limit=limit,
-                    country=country,
-                    start_year=start_year,
-                    end_year=end_year,
-                )
-                query = validated.query
-                limit = validated.limit
-                country = validated.country
-                start_year = validated.start_year
-                end_year = validated.end_year
+            validated = validate_input(
+                SearchBigQueryInput,
+                query=query,
+                limit=limit,
+                country=country,
+                start_year=start_year,
+                end_year=end_year,
+            )
+            query = validated.query
+            limit = validated.limit
+            country = validated.country
+            start_year = validated.start_year
+            end_year = validated.end_year
 
             def _do_search():
                 searcher = _ensure_bigquery_searcher()
@@ -195,9 +190,8 @@ def register_bigquery_tools(
         log_info("get_patent_bigquery called", patent_number=patent_number)
         try:
             # Validate inputs
-            if PYDANTIC_AVAILABLE:
-                validated = validate_input(GetPatentInput, patent_number=patent_number)
-                patent_number = validated.patent_number
+            validated = validate_input(GetPatentInput, patent_number=patent_number)
+            patent_number = validated.patent_number
 
             def _do_get():
                 searcher = _ensure_bigquery_searcher()
@@ -240,13 +234,12 @@ def register_bigquery_tools(
         )
         try:
             # Validate inputs
-            if PYDANTIC_AVAILABLE:
-                validated = validate_input(
-                    CPCSearchInput, cpc_code=cpc_code, limit=limit, country=country
-                )
-                cpc_code = validated.cpc_code
-                limit = validated.limit
-                country = validated.country
+            validated = validate_input(
+                CPCSearchInput, cpc_code=cpc_code, limit=limit, country=country
+            )
+            cpc_code = validated.cpc_code
+            limit = validated.limit
+            country = validated.country
 
             def _do_search():
                 searcher = _ensure_bigquery_searcher()
@@ -288,7 +281,7 @@ def register_bigquery_tools(
             "search_patents_by_ipc_bigquery called", ipc_code=ipc_code, limit=limit, country=country
         )
         try:
-            if PYDANTIC_AVAILABLE and IPCSearchInput:
+            if IPCSearchInput:
                 validated = validate_input(
                     IPCSearchInput, ipc_code=ipc_code, limit=limit, country=country
                 )
@@ -335,7 +328,7 @@ def register_bigquery_tools(
         """
         log_info("search_patent_family_bigquery called", family_id=family_id, limit=limit)
         try:
-            if PYDANTIC_AVAILABLE and FamilySearchInput:
+            if FamilySearchInput:
                 validated = validate_input(
                     FamilySearchInput, family_id=family_id, limit=limit
                 )

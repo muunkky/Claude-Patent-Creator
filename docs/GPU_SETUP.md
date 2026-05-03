@@ -211,7 +211,7 @@ pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
 
 ### Multiple Python installations conflict
 
-The fixes in `server.py` and `patent_index.py` disable user site-packages to prevent conflicts. If you still have issues:
+The fix in `server.py` disables user site-packages to prevent conflicts. If you still have issues:
 
 ```powershell
 # Check Python paths
@@ -236,8 +236,6 @@ patent-creator setup
 # Or rebuild if you already have one
 patent-creator setup --rebuild
 
-# Build patent index (if you have patent corpus downloaded)
-patent-creator build-patent-index
 ```
 
 The GPU will automatically be used. You'll see:
@@ -252,12 +250,7 @@ GPU detected: NVIDIA GeForce RTX 5090 Laptop GPU (23.9GB VRAM)
 - Enhanced `get_device()` with `FORCE_CPU` support
 - Better GPU detection messages with VRAM display
 
-### 2. `mcp_server/patent_index.py`
-- Added user site-packages disabling
-- Same `get_device()` improvements
-- Consistent GPU control across all operations
-
-### 3. `requirements.txt`
+### 2. `requirements.txt`
 - Updated to PyTorch 2.9.0 information
 - Added faiss-gpu-cu12/cu11 installation instructions (Linux)
 - Noted old faiss-gpu package is archived

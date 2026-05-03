@@ -2,9 +2,6 @@
 include README.md
 include LICENSE
 
-# Include .claude configuration directory from mcp_server package
-recursive-include mcp_server/.claude *
-
 # Include pyproject.toml and setup configuration
 include pyproject.toml
 

@@ -9,7 +9,7 @@ Complete installation and configuration of the Claude Patent Creator MCP server.
 
 ## Instructions
 
-1. Verify we're in the correct directory (FINAL)
+1. Verify we're in the project root (the directory containing `pyproject.toml`)
 2. Run the patent-creator setup command
 3. Monitor progress through:
    - PyTorch installation

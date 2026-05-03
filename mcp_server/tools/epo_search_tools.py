@@ -32,8 +32,6 @@ def register_epo_tools(
     log_error,
     validate_input,
     track_performance,
-    PYDANTIC_AVAILABLE,
-    BEST_PRACTICES_AVAILABLE,
 ):
     """Register EPO OPS API search tools with the MCP server.
 
@@ -43,8 +41,6 @@ def register_epo_tools(
         log_error: Logging function for error messages
         validate_input: Input validation function
         track_performance: Performance tracking decorator
-        PYDANTIC_AVAILABLE: Flag indicating if Pydantic is available
-        BEST_PRACTICES_AVAILABLE: Flag indicating if best practices modules are available
     """
 
     # Thread-safe lazy-loaded EPO client
@@ -74,7 +70,7 @@ def register_epo_tools(
         return _epo_client
 
     @mcp.tool()
-    @track_performance("tool_check_epo_api_status") if BEST_PRACTICES_AVAILABLE else lambda f: f
+    @track_performance("tool_check_epo_api_status")
     def check_epo_api_status() -> dict[str, Any]:
         """Check EPO OPS API availability, credential status, and quota information.
 
@@ -115,7 +111,7 @@ def register_epo_tools(
             }
 
     @mcp.tool()
-    @track_performance("tool_search_epo_patents") if BEST_PRACTICES_AVAILABLE else lambda f: f
+    @track_performance("tool_search_epo_patents")
     async def search_epo_patents(query: str, limit: int = 25) -> list[dict[str, Any]]:
         """Search European patents via EPO OPS API using CQL query syntax.
 
@@ -216,7 +212,7 @@ def register_epo_tools(
             return [{"error": f"EPO patent search failed: {str(e)}"}]
 
     @mcp.tool()
-    @track_performance("tool_get_epo_patent") if BEST_PRACTICES_AVAILABLE else lambda f: f
+    @track_performance("tool_get_epo_patent")
     async def get_epo_patent(patent_number: str) -> dict[str, Any]:
         """Get EP patent details including full-text claims and description via EPO OPS.
 
@@ -322,7 +318,7 @@ def register_epo_tools(
             return {"error": f"Failed to retrieve patent from EPO: {str(e)}"}
 
     @mcp.tool()
-    @track_performance("tool_get_epo_patent_family") if BEST_PRACTICES_AVAILABLE else lambda f: f
+    @track_performance("tool_get_epo_patent_family")
     async def get_epo_patent_family(patent_number: str) -> list[dict[str, Any]]:
         """Get patent family members across all jurisdictions via EPO OPS.
 

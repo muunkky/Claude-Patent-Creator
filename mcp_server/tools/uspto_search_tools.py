@@ -28,8 +28,6 @@ def register_uspto_tools(
     SearchUSPTOInput,
     GetPatentInput,
     track_performance,
-    PYDANTIC_AVAILABLE,
-    BEST_PRACTICES_AVAILABLE,
 ):
     """Register USPTO API search tools with the MCP server.
 
@@ -41,8 +39,6 @@ def register_uspto_tools(
         SearchUSPTOInput: Pydantic model for search validation
         GetPatentInput: Pydantic model for patent retrieval validation
         track_performance: Performance tracking decorator
-        PYDANTIC_AVAILABLE: Flag indicating if Pydantic is available
-        BEST_PRACTICES_AVAILABLE: Flag indicating if best practices modules are available
     """
 
     # Maintain USPTO client state within register function scope
@@ -58,7 +54,7 @@ def register_uspto_tools(
         return uspto_client
 
     @mcp.tool()
-    @track_performance("tool_search_uspto_api") if BEST_PRACTICES_AVAILABLE else lambda f: f
+    @track_performance("tool_search_uspto_api")
     def search_uspto_api(
         query: str,
         limit: int = 25,
@@ -70,22 +66,21 @@ def register_uspto_tools(
         """Search USPTO Open Data Portal API (live database). Requires USPTO_API_KEY environment variable. Supports year range and application type filters."""
         try:
             # Validate inputs
-            if PYDANTIC_AVAILABLE:
-                validated = validate_input(
-                    SearchUSPTOInput,
-                    query=query,
-                    limit=limit,
-                    start_year=start_year,
-                    end_year=end_year,
-                    application_type=application_type,
-                    status=status,
-                )
-                query = validated.query
-                limit = validated.limit
-                start_year = validated.start_year
-                end_year = validated.end_year
-                application_type = validated.application_type
-                status = validated.status
+            validated = validate_input(
+                SearchUSPTOInput,
+                query=query,
+                limit=limit,
+                start_year=start_year,
+                end_year=end_year,
+                application_type=application_type,
+                status=status,
+            )
+            query = validated.query
+            limit = validated.limit
+            start_year = validated.start_year
+            end_year = validated.end_year
+            application_type = validated.application_type
+            status = validated.status
 
             log_info("search_uspto_api_tool_called", query_length=len(query), limit=limit)
 
@@ -145,14 +140,13 @@ def register_uspto_tools(
             return [{"error": f"USPTO API search failed: {str(e)}"}]
 
     @mcp.tool()
-    @track_performance("tool_get_uspto_patent") if BEST_PRACTICES_AVAILABLE else lambda f: f
+    @track_performance("tool_get_uspto_patent")
     def get_uspto_patent(patent_number: str) -> dict[str, Any]:
         """Get detailed patent information from USPTO API by patent number (e.g., "11234567" or "US11234567")."""
         try:
             # Validate inputs
-            if PYDANTIC_AVAILABLE:
-                validated = validate_input(GetPatentInput, patent_number=patent_number)
-                patent_number = validated.patent_number
+            validated = validate_input(GetPatentInput, patent_number=patent_number)
+            patent_number = validated.patent_number
 
             log_info("get_uspto_patent_tool_called", patent_number=patent_number)
 
@@ -198,7 +192,7 @@ def register_uspto_tools(
             return {"error": f"Failed to retrieve patent: {str(e)}"}
 
     @mcp.tool()
-    @track_performance("tool_get_recent_uspto_patents") if BEST_PRACTICES_AVAILABLE else lambda f: f
+    @track_performance("tool_get_recent_uspto_patents")
     def get_recent_uspto_patents(
         days: int = 7, application_type: str = "Utility", limit: int = 100
     ) -> list[dict[str, Any]]:
@@ -250,7 +244,7 @@ def register_uspto_tools(
             return [{"error": f"Failed to retrieve recent patents: {str(e)}"}]
 
     @mcp.tool()
-    @track_performance("tool_check_uspto_api_status") if BEST_PRACTICES_AVAILABLE else lambda f: f
+    @track_performance("tool_check_uspto_api_status")
     def check_uspto_api_status() -> dict[str, Any]:
         """Check USPTO API accessibility and API key validity."""
         try:

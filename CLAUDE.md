@@ -68,9 +68,9 @@ pip install git+https://github.com/RobThePCGuy/Claude-Patent-Creator.git && pate
 | **IPC Search** | Search patents by IPC classification code | Ready |
 | **Patent Family Search** | Find related patents across jurisdictions | Ready |
 | **US Claims Review** | Automated 35 USC 112(b) compliance checking | Ready |
-| **EPO Claims Review** | Automated Art. 84 EPC compliance checking | Ready |
+| **EPO Claims Review** | Art. 84 EPC compliance checking (Art. 123(2) added-matter not implemented) | Partial |
 | **US Specification Review** | Written description, enablement, best mode analysis | Ready |
-| **EPO Specification Review** | Art. 83 EPC sufficiency of disclosure analysis | Ready |
+| **EPO Specification Review** | Art. 83 EPC sufficiency of disclosure (Art. 123(2) added-matter not implemented) | Partial |
 | **US Formalities Check** | MPEP 608 compliance (abstract, title, drawings) | Ready |
 | **EPO Formalities Check** | Rules 42-49 EPC compliance | Ready |
 | **PCT Formalities Check** | PCT Rules 5-12 compliance | Ready |
@@ -107,7 +107,7 @@ Claude will automatically activate specialized skills based on your task. These 
 | **testing-assistant** | Running tests, validation, or quality assurance | Complete test suite execution and validation workflows |
 | **patent-reviewer** | Reviewing patent applications for USPTO compliance | Expert review system with automated compliance checking |
 | **patent-claims-analyzer** | Reviewing claims specifically for 35 USC 112(b) | Deep-dive claims analysis (definiteness, antecedent basis, structure) |
-| **patent-search** | Searching patents, prior art, or competitive intelligence | BigQuery (100M+) and PatentsView API search workflows |
+| **patent-search** | Searching patents, prior art, or competitive intelligence | BigQuery (100M+) search workflows via MCP tools |
 | **bigquery-patent-search** | Quick BigQuery-only patent searching | Keyword, CPC, and patent detail retrieval across 100M+ patents |
 | **mpep-search** | Finding MPEP sections, statutes, or regulations | Hybrid RAG search across MPEP, 35 USC, 37 CFR |
 | **patent-diagram-generator** | Creating technical diagrams for patents | Graphviz-based diagram generation |
@@ -149,7 +149,7 @@ For long-running, complex workflows that benefit from context isolation, use spe
 - "Create a patent for my invention, use subagent" -> patent-creator works for 55-80 min independently
 - "Help me create a patent interactively" -> patent-reviewer skill guides you step-by-step
 
-Subagents are located in `.claude/subagents/` and have access to all MCP tools.
+Subagents are located in `agents/` at the repo root and have access to all MCP tools.
 
 ---
 
@@ -386,7 +386,7 @@ python scripts/test_install.py
 | **Configuration** | `.env` | Environment variables |
 | **CLI Tool** | `mcp_server/cli.py` | `patent-creator` command |
 | **Skills** | `.claude/skills/` | Specialized skill documentation |
-| **Subagents** | `.claude/subagents/` | Autonomous workflow subagents |
+| **Subagents** | `agents/` | Autonomous workflow subagents |
 | **Commands** | `.claude/commands/` | Slash command definitions |
 
 ### Environment Variables
@@ -412,8 +412,6 @@ CLAUDE_CODE_GIT_BASH_PATH=C:\dev\Git\bin\bash.exe
 ```
 
 ### Version Compatibility Matrix
-
-**See PACKAGE_COMPATIBILITY_2025.md for complete details**
 
 | Component | Min Version | Max Version | Recommended | Critical Notes |
 |-----------|-------------|-------------|-------------|----------------|

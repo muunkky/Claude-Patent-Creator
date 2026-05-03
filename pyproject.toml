@@ -20,12 +20,14 @@ classifiers = [
 ]
 
 dependencies = [
-    # NOTE: PyTorch is installed by 'patent-creator setup' command with GPU detection
-    # Run: pip install git+https://github.com/RobThePCGuy/Claude-Patent-Creator.git && patent-creator setup
+    # NOTE: A bare `pip install` lands a CPU torch wheel here so the package
+    # is functional out of the box. `patent-creator setup` detects GPUs and
+    # swaps in a CUDA/MPS torch wheel for a 5-10x speedup on index building.
+    "torch>=2.0",                          # CPU baseline; setup may swap to GPU build
     "mcp>=1.21.0",                         # MCP Server Framework (includes FastMCP)
     "PyMuPDF>=1.26.0",                     # PDF processing (verified Jan 2025)
     "sentence-transformers>=5.1.2,<6.0.0", # Embedding models (verified Jan 2025)
-    "faiss-cpu>=1.13.0",                   # Vector search (numpy 2.x support added in 1.13.0)
+    "faiss-cpu>=1.13.2",                   # Vector search (numpy 2.x support, latest patch)
     "numpy>=1.26.0,<3.0.0",                # numpy 2.x compatible with faiss-cpu >=1.13.0
     "rank-bm25>=0.2.2",                    # Lexical search
     "beautifulsoup4>=4.14.3",              # HTML/XML parsing (verified Jan 2025)
@@ -52,11 +54,9 @@ gpu = [
     # Note: faiss-gpu-cu12 available for Linux only
 ]
 llm = [
-    # API-based HyDE query expansion and RAG evaluation
+    # API-based HyDE query expansion (opt-in via HYDE_BACKEND=api)
     "anthropic>=0.94.0", # Claude API for HyDE
-    "openai>=2.31.0",     # OpenAI API for HyDE
-    "ragas>=0.3.8",      # RAG evaluation metrics
-    "datasets>=4.4.1",   # HuggingFace datasets for evaluation
+    "openai>=2.31.0",    # OpenAI API for HyDE
 ]
 
 [project.scripts]
@@ -78,14 +78,7 @@ where = ["."]
 include = ["mcp_server*"]
 
 [tool.setuptools.package-data]
-# Include Python files and .claude configuration directory
-mcp_server = [
-    "*.py",
-    ".claude/CLAUDE.md",
-    ".claude/commands/*",
-    ".claude/skills/*",
-    ".claude/evaluations/*",
-]
+mcp_server = ["*.py"]
 
 [tool.black]
 line-length = 100
@@ -123,7 +116,7 @@ ignore = [
 "test_*.py" = ["ARG"]     # Unused function arguments in tests
 "mcp_server/cli.py" = ["ARG001", "E402"]  # CLI handlers must accept args; sys.path manipulation before imports
 "mcp_server/server.py" = ["ARG001"]  # Dependency injection parameters
-"mcp_server/validation.py" = ["N802", "ARG001"]  # Field() shim matching Pydantic API; fallback stubs
+"mcp_server/validation.py" = ["N802"]  # Field() shim matching Pydantic API
 "mcp_server/tools/*.py" = ["ARG001"]  # Dependency injection parameters for tool registration
 "mcp_server/uspto_api.py" = ["ARG001"]  # Fallback decorator parameter
 "mcp_server/epo_api.py" = ["ARG001"]  # Fallback decorator parameter

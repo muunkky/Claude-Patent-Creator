@@ -34,8 +34,6 @@ def register_analyzer_tools(
     CheckFormalitiesInput,
     track_performance,
     log_operation_result,
-    PYDANTIC_AVAILABLE,
-    BEST_PRACTICES_AVAILABLE,
 ):
     """Register patent analyzer tools with the MCP server.
 
@@ -54,19 +52,16 @@ def register_analyzer_tools(
         CheckFormalitiesInput: Pydantic model for formalities check validation
         track_performance: Performance tracking decorator
         log_operation_result: Operation result logging function
-        PYDANTIC_AVAILABLE: Flag indicating if Pydantic is available
-        BEST_PRACTICES_AVAILABLE: Flag indicating if best practices modules are available
     """
 
     @mcp.tool()
-    @track_performance("tool_review_claims") if BEST_PRACTICES_AVAILABLE else lambda f: f
+    @track_performance("tool_review_claims")
     def review_patent_claims(claims_text: str) -> dict[str, Any]:
         """Analyze patent claims for 35 USC 112(b) compliance: antecedent basis, definiteness, subjective terms, cross-references, and structure."""
         try:
             # Validate inputs
-            if PYDANTIC_AVAILABLE:
-                validated = validate_input(ReviewClaimsInput, claims_text=claims_text)
-                claims_text = validated.claims_text
+            validated = validate_input(ReviewClaimsInput, claims_text=claims_text)
+            claims_text = validated.claims_text
 
             log_info("review_claims_started", claims_length=len(claims_text))
 
@@ -105,11 +100,7 @@ def register_analyzer_tools(
                     "issues": analysis_results["issues"],
                     "mpep_references": mpep_refs,
                 }
-                (
-                    log_operation_result("review_claims", total_issues=result["total_issues"])
-                    if BEST_PRACTICES_AVAILABLE
-                    else None
-                )
+                log_operation_result("review_claims", total_issues=result["total_issues"])
                 return result
 
             # Fallback to MPEP search if analyzer not available
@@ -141,17 +132,16 @@ def register_analyzer_tools(
             return {"error": f"Claims review failed: {str(e)}"}
 
     @mcp.tool()
-    @track_performance("tool_review_specification") if BEST_PRACTICES_AVAILABLE else lambda f: f
+    @track_performance("tool_review_specification")
     def review_specification(claims_text: str, specification: str) -> dict[str, Any]:
         """Analyze specification support for claims per 35 USC 112(a): written description, enablement, and best mode."""
         try:
             # Validate inputs
-            if PYDANTIC_AVAILABLE:
-                validated = validate_input(
-                    ReviewSpecificationInput, claims_text=claims_text, specification=specification
-                )
-                claims_text = validated.claims_text
-                specification = validated.specification
+            validated = validate_input(
+                ReviewSpecificationInput, claims_text=claims_text, specification=specification
+            )
+            claims_text = validated.claims_text
+            specification = validated.specification
 
             log_info(
                 "review_specification_started",
@@ -201,13 +191,9 @@ def register_analyzer_tools(
                     "issues": analysis_results["issues"],
                     "mpep_references": mpep_refs,
                 }
-                (
-                    log_operation_result(
+                log_operation_result(
                         "review_specification", total_issues=result["total_issues"]
                     )
-                    if BEST_PRACTICES_AVAILABLE
-                    else None
-                )
                 return result
 
             # Fallback to MPEP search if analyzers not available
@@ -241,7 +227,7 @@ def register_analyzer_tools(
             return {"error": f"Specification review failed: {str(e)}"}
 
     @mcp.tool()
-    @track_performance("tool_check_formalities") if BEST_PRACTICES_AVAILABLE else lambda f: f
+    @track_performance("tool_check_formalities")
     def check_formalities(
         abstract: Optional[str] = None,
         title: Optional[str] = None,
@@ -251,18 +237,17 @@ def register_analyzer_tools(
         """Check patent application formalities per MPEP 608: abstract (50-150 words), title (<=500 chars), required sections, and drawing references."""
         try:
             # Validate inputs
-            if PYDANTIC_AVAILABLE:
-                validated = validate_input(
-                    CheckFormalitiesInput,
-                    abstract=abstract,
-                    title=title,
-                    specification=specification,
-                    drawings_present=drawings_present,
-                )
-                abstract = validated.abstract
-                title = validated.title
-                specification = validated.specification
-                drawings_present = validated.drawings_present
+            validated = validate_input(
+                CheckFormalitiesInput,
+                abstract=abstract,
+                title=title,
+                specification=specification,
+                drawings_present=drawings_present,
+            )
+            abstract = validated.abstract
+            title = validated.title
+            specification = validated.specification
+            drawings_present = validated.drawings_present
 
             log_info(
                 "check_formalities_started",
@@ -311,11 +296,7 @@ def register_analyzer_tools(
                     "issues": analysis_results["issues"],
                     "mpep_references": mpep_refs,
                 }
-                (
-                    log_operation_result("check_formalities", compliant=result["overall_compliant"])
-                    if BEST_PRACTICES_AVAILABLE
-                    else None
-                )
+                log_operation_result("check_formalities", compliant=result["overall_compliant"])
                 return result
 
             # Fallback to MPEP search if checker not available

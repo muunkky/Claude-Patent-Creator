@@ -43,7 +43,6 @@ class SystemHealthChecker:
             "timestamp": datetime.now().isoformat(),
             "mpep_index": self._check_mpep_index(),
             "bigquery": self._check_bigquery(),
-            "patent_corpus": self._check_patent_corpus(),
             "uspto_api": self._check_uspto_api(),
             "graphviz": self._check_graphviz(),
             "gpu_status": self._check_gpu(),
@@ -205,52 +204,6 @@ class SystemHealthChecker:
                 "error": str(e),
                 "fix": "pip install google-cloud-bigquery db-dtypes",
                 "details": "BigQuery module not available",
-            }
-
-    def _check_patent_corpus(self) -> dict[str, Any]:
-        """Check if patent corpus is downloaded and indexed (legacy local search)"""
-        try:
-            from patent_corpus import PATENT_INDEX_DIR
-        except ImportError:
-            return {
-                "status": "module_missing",
-                "ready": False,
-                "details": "Patent corpus module not available",
-                "note": "Use BigQuery instead (RECOMMENDED)",
-                "required_for": ["search_prior_art (legacy local)"],
-            }
-
-        index_file = PATENT_INDEX_DIR / "patent_index.faiss"
-
-        if not index_file.exists():
-            return {
-                "status": "not_built",
-                "ready": False,
-                "fix": "patent-creator download-patents --build-index (NOT RECOMMENDED)",
-                "details": "Local patent corpus not built. Takes 24+ hours to index on RTX 5090 GPU.",
-                "alternative": "Use BigQuery instead (RECOMMENDED - instant access, 76M patents)",
-                "required_for": ["search_prior_art (legacy local mode)"],
-            }
-
-        try:
-            import faiss
-
-            index = faiss.read_index(str(index_file))
-            patent_count = index.ntotal
-
-            return {
-                "status": "ready",
-                "ready": True,
-                "patents_indexed": patent_count,
-                "size_gb": round(index_file.stat().st_size / (1024**3), 2),
-                "last_modified": datetime.fromtimestamp(index_file.stat().st_mtime).isoformat(),
-            }
-        except Exception as e:
-            return {
-                "status": "corrupt",
-                "ready": False,
-                "error": str(e),
-                "fix": "patent-creator download-patents --build-index --force",
             }
 
     def _check_uspto_api(self) -> dict[str, Any]:
@@ -615,11 +568,6 @@ class SystemHealthChecker:
                 f"[WARNING] USPTO API not configured. {self.results['uspto_api'].get('details', '')}"
             )
 
-        if not self.results.get("patent_corpus", {}).get("ready"):
-            warnings.append(
-                f"[WARNING] Patent corpus not available. Use USPTO API or run: {self.results['patent_corpus'].get('fix', 'unknown')}"
-            )
-
         if not self.results.get("graphviz", {}).get("ready"):
             warnings.append("[WARNING] Graphviz not installed. Diagram generation will not work.")
 
@@ -646,20 +594,6 @@ class SystemHealthChecker:
         else:
             print(f"{mpep.get('status', 'unknown')}", file=sys.stderr)
             print(f"                         Fix: {mpep.get('fix', 'unknown')}", file=sys.stderr)
-
-        # Patent Corpus
-        corpus = self.results.get("patent_corpus", {})
-        status_icon = "[OK]" if corpus.get("ready") else "[X]"
-        print(f"Patent Corpus......... {status_icon} ", end="", file=sys.stderr)
-        if corpus.get("ready"):
-            print(
-                f"Ready ({corpus.get('patents_indexed', 0):,} patents, {corpus.get('size_gb', 0)} GB)",
-                file=sys.stderr,
-            )
-        else:
-            print(f"{corpus.get('status', 'unknown')}", file=sys.stderr)
-            if corpus.get("fix"):
-                print(f"                         Fix: {corpus.get('fix')}", file=sys.stderr)
 
         # USPTO API
         uspto = self.results.get("uspto_api", {})

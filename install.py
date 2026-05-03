@@ -526,71 +526,6 @@ def setup_bigquery():
         return False
 
 
-def download_patent_corpus():
-    """Information about patent prior art search options"""
-    print_header("PATENT PRIOR ART SEARCH")
-    print_warning("[WARNING] Local corpus indexing takes 24+ hours on RTX 5090 GPU!")
-    print_info("")
-    print_success("RECOMMENDED: Use Google BigQuery instead")
-    print_info("  * 100M+ worldwide patents (vs 9.2M local)")
-    print_info("  * No indexing required (instant access)")
-    print_info("  * Free for typical usage (1TB/month)")
-    print_info("  * Full-text search on abstracts, claims, descriptions")
-    print_info("  * Updated regularly by Google")
-    print_info("")
-    print_info("Available tools:")
-    print_info("  * search_patents_bigquery - Keyword search")
-    print_info("  * get_patent_bigquery - Get full patent details")
-    print_info("  * search_patents_by_cpc_bigquery - CPC classification search")
-    print_info("")
-    print_warning("Legacy Option: Local corpus (NOT RECOMMENDED)")
-    print_info("  * Size: ~13GB download + ~20GB index")
-    print_info("  * Time: 24+ hours to build index on RTX 5090")
-    print_info("  * Coverage: Only 9.2M patents (vs 76M on BigQuery)")
-    print_info("  * Offline semantic search capability")
-
-    response = input("\nDo you still want to download local corpus? (y/n): ").lower()
-    if response != "y":
-        print_success("Good choice! BigQuery will be used for patent search")
-        print_info("No additional setup needed - tools will be available after restart")
-        return False
-
-    # User really wants local corpus
-    print_warning("Proceeding with local corpus download...")
-    print_info("This will download 13GB and require 24+ hours to index")
-
-    venv_python = get_venv_python()
-
-    response = input("\nConfirm download? (y/n): ").lower()
-    if response == "y":
-        if run_command(
-            f'"{venv_python}" -m mcp_server.cli download-patents',
-            "Downloading patent corpus",
-            check=False,
-            show_output=True,
-        ):
-            print_success("Patent corpus downloaded")
-
-            response = input(
-                "\nBuild search index now? (Takes ~24 hours on RTX 5090 GPU) (y/n): "
-            ).lower()
-            if response == "y":
-                run_command(
-                    f'"{venv_python}" -m mcp_server.cli download-patents --build-index',
-                    "Building search index (this will take a while)",
-                    check=False,
-                    show_output=True,
-                )
-            else:
-                print_info(
-                    "Skipped index build - run 'patent-creator download-patents --build-index' later"
-                )
-            return True
-    else:
-        print_info("Cancelled - use BigQuery for patent search instead")
-    return False
-
-
 def install_graphviz():
     """Install Graphviz for diagram generation"""
     print_header("INSTALLING DIAGRAM TOOLS (OPTIONAL)")
@@ -608,52 +543,6 @@ def install_graphviz():
     else:
         print_info("Skipped Graphviz - diagrams will not be available")
         print_info("You can install later by running: python scripts/install_graphviz.py")
-
-
-def copy_claude_config():
-    """Display information about .claude directory setup
-
-    Note: As of the latest version, .claude configuration is now copied per-project
-    using the MCP tool 'setup_claude_config' rather than globally to ~/.claude.
-
-    This allows each project to have its own patent creator commands without
-    cluttering the global ~/.claude directory.
-
-    Returns:
-        bool: Always returns True (no actual copying performed)
-    """
-    print_header("CLAUDE CODE INTEGRATION INFO")
-
-    project_root = Path(__file__).parent.resolve()
-    source_claude = project_root / "mcp_server" / ".claude"
-
-    if not source_claude.exists():
-        print_warning(".claude directory not found in mcp_server package")
-        return False
-
-    print_info("The .claude configuration contains:")
-    print_info("")
-    print_info("Available commands:")
-    print_info("  /full-review - Complete patent application review")
-    print_info("  /review-claims - Analyze claims only")
-    print_info("  /review-specification - Check specification")
-    print_info("  /review-formalities - Verify formalities")
-    print_info("  /create-patent - Create a complete patent application")
-    print_info("")
-    print_info("Available skills:")
-    print_info("  @patent-creator - USPTO rules and patent analysis")
-    print_info("  @patent-search - Prior art search using PatentsView API")
-    print_info("")
-    print_success("To use these in a project:")
-    print_info("  1. Open your project in Claude Code")
-    print_info("  2. Ask Claude to call the 'setup_claude_config' tool")
-    print_info("  3. Pass your project directory path as the argument")
-    print_info("")
-    print_info("Example: 'Please setup the patent creator commands for this project'")
-    print_info("")
-    print_info(f"Source location: {source_claude}")
-
-    return True
 
 
 def register_with_claude():
@@ -769,16 +658,10 @@ def main():
     # Step 5: Setup BigQuery
     setup_bigquery()
 
-    # Step 6: Optional patent corpus
-    download_patent_corpus()
-
-    # Step 7: Optional Graphviz
+    # Step 6: Optional Graphviz
     install_graphviz()
 
-    # Step 8: Copy Claude Code configuration
-    copy_claude_config()
-
-    # Step 9: Register with Claude Code
+    # Step 7: Register with Claude Code
     register_with_claude()
 
     # Done
@@ -837,9 +720,6 @@ def main():
 
    {Colors.OKGREEN}[OK] USPTO API{Colors.ENDC} - search_uspto_api
      * Real-time US patent data, official USPTO source
-
-   {Colors.WARNING}[WARNING] Local Corpus{Colors.ENDC} - search_prior_art (if installed)
-     * 9.2M patents, requires 24+ hour indexing, offline capable
 
 {Colors.BOLD}5. Available Slash Commands{Colors.ENDC} (after setup in project)
    * {Colors.OKGREEN}/full-review{Colors.ENDC}        - Complete patent application review

@@ -1,13 +1,13 @@
 ---
 name: bigquery-patent-search
-description: Fast, cloud-based patent searching across 76 million+ worldwide patents using Google BigQuery - keyword search, CPC classification, patent details retrieval
+description: Fast, cloud-based patent searching across 100 million+ worldwide patents using Google BigQuery - keyword search, CPC classification, patent details retrieval
 tools: Bash, Read, Write
 model: sonnet
 ---
 
 # BigQuery Patent Search Skill
 
-Fast, cloud-based patent searching across 76 million+ worldwide patents using Google BigQuery.
+Fast, cloud-based patent searching across 100 million+ worldwide patents using Google BigQuery.
 
 ## When to Use
 
@@ -203,10 +203,10 @@ If BigQuery is not configured:
 ## Cost Considerations
 
 BigQuery pricing:
-- **First 1TB/month**: FREE
-- **After 1TB**: $5 per TB queried
+- **First 1 TiB/month**: FREE
+- **After 1 TiB**: $6.25 per TiB queried (on-demand)
 - **Typical query**: 10-50 MB per search
-- **~20,000 searches** free per month
+- **Bytes-billed ceiling**: enforced per-query via `PATENT_BIGQUERY_MAX_BYTES_BILLED` (default 25 GiB)
 
 ## Tools Available
 

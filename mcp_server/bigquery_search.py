@@ -75,6 +75,11 @@ class BigQueryPatentSearch:
     TABLE_ID = "publications"
     FULL_TABLE_ID = f"{PROJECT_ID}.{DATASET_ID}.{TABLE_ID}"
 
+    # Per-query bytes-billed ceiling. Defaults to 25 GiB; override via
+    # PATENT_BIGQUERY_MAX_BYTES_BILLED.
+    DEFAULT_MAX_BYTES_BILLED = 25 * 1024**3
+    QUERY_TIMEOUT_SECONDS = 30
+
     def __init__(self, project_id: Optional[str] = None):
         """
         Initialize BigQuery client
@@ -233,35 +238,40 @@ class BigQueryPatentSearch:
         if LOGGING_AVAILABLE and logger:
             logger.info("bigquery_search_started", extra=log_extra)
 
-        # Build WHERE conditions
-        conditions = [f"country_code = '{country}'"]
+        conditions = ["country_code = @country"]
+        parameters = [
+            bigquery.ScalarQueryParameter("query", "STRING", f"%{query.lower()}%"),  # type: ignore[union-attr]
+            bigquery.ScalarQueryParameter("country", "STRING", country),  # type: ignore[union-attr]
+            bigquery.ScalarQueryParameter("limit", "INT64", limit),  # type: ignore[union-attr]
+            bigquery.ScalarQueryParameter("offset", "INT64", offset),  # type: ignore[union-attr]
+        ]
 
-        # Add search conditions
+        # claims_localized only carries text for US publications; for EP/WO
+        # full-text use epo_api.py.
         search_conditions = []
         if "abstract" in search_fields:
             search_conditions.append("LOWER(abstract_localized[SAFE_OFFSET(0)].text) LIKE @query")
         if "title" in search_fields:
             search_conditions.append("LOWER(title_localized[SAFE_OFFSET(0)].text) LIKE @query")
-        # INTENTIONAL: claims_localized and description_localized contain data
-        # for US publications ONLY (per Google's official schema docs at
-        # github.com/google/patents-public-data). Non-US rows have NULL in these
-        # fields, so querying them wastes BigQuery quota and returns nothing.
-        # For EP/WO full-text claims, use the EPO OPS API (epo_api.py).
         if "claims" in search_fields and country == "US":
             search_conditions.append("LOWER(claims_localized[SAFE_OFFSET(0)].text) LIKE @query")
 
         if search_conditions:
             conditions.append(f"({' OR '.join(search_conditions)})")
 
-        # Add date filters
         if start_year:
-            conditions.append(f"CAST(filing_date AS INT64) >= {start_year}0101")
+            conditions.append("CAST(filing_date AS INT64) >= @start_yyyymmdd")
+            parameters.append(
+                bigquery.ScalarQueryParameter("start_yyyymmdd", "INT64", start_year * 10000 + 101)  # type: ignore[union-attr]
+            )
         if end_year:
-            conditions.append(f"CAST(filing_date AS INT64) <= {end_year}1231")
+            conditions.append("CAST(filing_date AS INT64) <= @end_yyyymmdd")
+            parameters.append(
+                bigquery.ScalarQueryParameter("end_yyyymmdd", "INT64", end_year * 10000 + 1231)  # type: ignore[union-attr]
+            )
 
         where_clause = " AND ".join(conditions)
 
-        # Build query
         sql = f"""
         SELECT
             publication_number,
@@ -280,13 +290,7 @@ class BigQueryPatentSearch:
         OFFSET @offset
         """
 
-        job_config = bigquery.QueryJobConfig(  # type: ignore[union-attr]
-            query_parameters=[
-                bigquery.ScalarQueryParameter("query", "STRING", f"%{query.lower()}%"),  # type: ignore[union-attr]
-                bigquery.ScalarQueryParameter("limit", "INT64", limit),  # type: ignore[union-attr]
-                bigquery.ScalarQueryParameter("offset", "INT64", offset),  # type: ignore[union-attr]
-            ]
-        )
+        job_config = self._make_job_config(parameters)
 
         try:
             # Execute query with timing and timeout (30 seconds)
@@ -381,10 +385,8 @@ class BigQueryPatentSearch:
         LIMIT 1
         """
 
-        job_config = bigquery.QueryJobConfig(  # type: ignore[union-attr]
-            query_parameters=[
-                bigquery.ScalarQueryParameter("patent_number", "STRING", patent_number),  # type: ignore[union-attr]
-            ]
+        job_config = self._make_job_config(
+            [bigquery.ScalarQueryParameter("patent_number", "STRING", patent_number)]  # type: ignore[union-attr]
         )
 
         try:
@@ -503,8 +505,8 @@ class BigQueryPatentSearch:
         LIMIT @limit
         """
 
-        job_config = bigquery.QueryJobConfig(  # type: ignore[union-attr]
-            query_parameters=[
+        job_config = self._make_job_config(
+            [
                 bigquery.ScalarQueryParameter("cpc_code", "STRING", cpc_code),  # type: ignore[union-attr]
                 bigquery.ScalarQueryParameter("country", "STRING", country),  # type: ignore[union-attr]
                 bigquery.ScalarQueryParameter("limit", "INT64", limit),  # type: ignore[union-attr]
@@ -606,8 +608,8 @@ class BigQueryPatentSearch:
         LIMIT @limit
         """
 
-        job_config = bigquery.QueryJobConfig(  # type: ignore[union-attr]
-            query_parameters=[
+        job_config = self._make_job_config(
+            [
                 bigquery.ScalarQueryParameter("ipc_code", "STRING", ipc_code),  # type: ignore[union-attr]
                 bigquery.ScalarQueryParameter("country", "STRING", country),  # type: ignore[union-attr]
                 bigquery.ScalarQueryParameter("limit", "INT64", limit),  # type: ignore[union-attr]
@@ -704,8 +706,8 @@ class BigQueryPatentSearch:
         LIMIT @limit
         """
 
-        job_config = bigquery.QueryJobConfig(  # type: ignore[union-attr]
-            query_parameters=[
+        job_config = self._make_job_config(
+            [
                 bigquery.ScalarQueryParameter("family_id", "INT64", family_id),  # type: ignore[union-attr]
                 bigquery.ScalarQueryParameter("limit", "INT64", limit),  # type: ignore[union-attr]
             ]
@@ -755,6 +757,27 @@ class BigQueryPatentSearch:
                 print(f"BigQuery family search error: {e}", file=sys.stderr)
 
             raise
+
+    def _make_job_config(self, parameters: list) -> Any:
+        """Build a QueryJobConfig with parameters and the bytes-billed ceiling."""
+        max_bytes = self.DEFAULT_MAX_BYTES_BILLED
+        env_value = os.environ.get("PATENT_BIGQUERY_MAX_BYTES_BILLED")
+        if env_value:
+            try:
+                parsed = int(env_value)
+            except ValueError:
+                parsed = 0
+            if parsed > 0:
+                max_bytes = parsed
+            elif LOGGING_AVAILABLE and logger:
+                logger.warning(
+                    "patent_bigquery_max_bytes_billed_invalid",
+                    extra={"value": env_value, "fallback_bytes": max_bytes},
+                )
+        return bigquery.QueryJobConfig(  # type: ignore[union-attr]
+            query_parameters=parameters,
+            maximum_bytes_billed=max_bytes,
+        )
 
     def _format_date(self, date_int: Optional[int]) -> Optional[str]:
         """Convert YYYYMMDD integer to YYYY-MM-DD string"""

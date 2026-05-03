@@ -66,5 +66,8 @@ $env:VARIABLE_NAME
 
 ## Common Variables for This Project
 
-- `PATENTSVIEW_API_KEY` - PatentsView Search API key
-- `USPTO_API_KEY` - USPTO Open Data Portal API key
+- `GOOGLE_CLOUD_PROJECT` - GCP project for BigQuery patent search billing
+- `USPTO_API_KEY` - USPTO Open Data Portal API key (optional)
+- `EPO_OPS_KEY` / `EPO_OPS_SECRET` - EPO OPS API credentials (optional)
+- `HYDE_BACKEND` - Set to `api` to use Anthropic/OpenAI for HyDE query expansion
+- `PATENT_BIGQUERY_MAX_BYTES_BILLED` - Override the per-query BigQuery cost ceiling (default: 25 GiB)

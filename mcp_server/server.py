@@ -9,7 +9,6 @@ in the tools/ subdirectory for better maintainability.
 
 import os
 import platform
-import shutil
 import site
 import sys
 import zipfile
@@ -45,48 +44,23 @@ except ImportError:
     print("Error: mcp package not found. Install with: pip install mcp", file=sys.stderr)
     sys.exit(1)
 
-# Import best practice modules
-try:
-    from logging_config import get_logger
-    from monitoring import log_operation_result, track_performance
-    from validation import (
-        PYDANTIC_AVAILABLE,
-        CheckFormalitiesInput,
-        CPCSearchInput,
-        FamilySearchInput,
-        GetPatentInput,
-        IPCSearchInput,
-        RenderDiagramInput,
-        ReviewClaimsInput,
-        ReviewSpecificationInput,
-        SearchBigQueryInput,
-        SearchMPEPInput,
-        SearchPatentLawInput,
-        SearchUSPTOInput,
-        validate_input,
-    )
-
-    BEST_PRACTICES_AVAILABLE = True
-except ImportError as e:
-    BEST_PRACTICES_AVAILABLE = False
-    get_logger = None  # type: ignore[assignment]
-    track_performance = None  # type: ignore[assignment]
-    log_operation_result = None  # type: ignore[assignment]
-    validate_input = None  # type: ignore[assignment]
-    SearchMPEPInput = None  # type: ignore[assignment]
-    SearchBigQueryInput = None  # type: ignore[assignment]
-    SearchUSPTOInput = None  # type: ignore[assignment]
-    GetPatentInput = None  # type: ignore[assignment]
-    CPCSearchInput = None  # type: ignore[assignment]
-    IPCSearchInput = None  # type: ignore[assignment]
-    FamilySearchInput = None  # type: ignore[assignment]
-    SearchPatentLawInput = None  # type: ignore[assignment]
-    ReviewClaimsInput = None  # type: ignore[assignment]
-    ReviewSpecificationInput = None  # type: ignore[assignment]
-    CheckFormalitiesInput = None  # type: ignore[assignment]
-    RenderDiagramInput = None  # type: ignore[assignment]
-    PYDANTIC_AVAILABLE = False
-    print(f"Warning: Best practices modules not available: {e}", file=sys.stderr)
+from logging_config import get_logger
+from monitoring import log_operation_result, track_performance
+from validation import (
+    CheckFormalitiesInput,
+    CPCSearchInput,
+    FamilySearchInput,
+    GetPatentInput,
+    IPCSearchInput,
+    RenderDiagramInput,
+    ReviewClaimsInput,
+    ReviewSpecificationInput,
+    SearchBigQueryInput,
+    SearchMPEPInput,
+    SearchPatentLawInput,
+    SearchUSPTOInput,
+    validate_input,
+)
 
 # Import health check system
 try:
@@ -114,14 +88,11 @@ from downloaders import FileDownloader
 mcp = FastMCP("claude-patent-creator")
 
 # Initialize logger
-logger = get_logger() if BEST_PRACTICES_AVAILABLE else None  # type: ignore[misc]
+logger = get_logger()
 
 # Global variables
 MPEP_DIR = Path(__file__).parent.parent / "pdfs"
 INDEX_DIR = Path(__file__).parent / "index"
-# patent_corpus_index starts as None; prior_art_tools.py lazy-loads it via
-# nonlocal closure when the first prior art tool is invoked.
-patent_corpus_index = None
 mpep_index: Any = None
 
 # Ensure directories exist
@@ -146,32 +117,40 @@ SUBSEQUENT_PUBS_FILE = "subsequent_publications.pdf"
 class LazyMPEPIndex:
     """Proxy that defers MPEPIndex initialization until first attribute access.
 
-    Tool registration captures this proxy by closure but never accesses its
-    attributes until a tool is actually invoked. At that point, __getattr__
-    triggers the real MPEPIndex construction (loading SentenceTransformer,
-    CrossEncoder, FAISS, and BM25). This reduces MCP server startup from ~6s
-    to <1s.
+    Tool registration captures this proxy by closure but never touches its
+    attributes until a tool is actually invoked, at which point __getattr__
+    builds the real MPEPIndex. The double-checked lock guards against
+    concurrent first-uses both triggering an index build.
     """
 
     def __init__(self, use_hyde: bool = True):
-        # Use __dict__ directly to avoid triggering __getattr__ during init
+        import threading
+
+        # __dict__ writes here bypass __getattr__ during init.
         self.__dict__["_instance"] = None
         self.__dict__["_use_hyde"] = use_hyde
+        self.__dict__["_load_lock"] = threading.Lock()
 
     def _load(self):
         import time
 
-        if self.__dict__["_instance"] is not None:
-            return self.__dict__["_instance"]
+        instance = self.__dict__["_instance"]
+        if instance is not None:
+            return instance
 
-        _log_info("LazyMPEPIndex: Loading MPEP index (first use)...")
-        start = time.time()
-        instance = MPEPIndex(use_hyde=self.__dict__["_use_hyde"])
-        instance.build_index(force_rebuild=False)
-        elapsed = time.time() - start
-        _log_info(f"LazyMPEPIndex: Ready in {elapsed:.1f}s")
-        self.__dict__["_instance"] = instance
-        return instance
+        with self.__dict__["_load_lock"]:
+            instance = self.__dict__["_instance"]
+            if instance is not None:
+                return instance
+
+            _log_info("LazyMPEPIndex: Loading MPEP index (first use)...")
+            start = time.time()
+            instance = MPEPIndex(use_hyde=self.__dict__["_use_hyde"])
+            instance.build_index(force_rebuild=False)
+            elapsed = time.time() - start
+            _log_info(f"LazyMPEPIndex: Ready in {elapsed:.1f}s")
+            self.__dict__["_instance"] = instance
+            return instance
 
     def __getattr__(self, name):
         return getattr(self._load(), name)
@@ -322,7 +301,6 @@ from tools.diagram_tools import register_diagram_tools  # noqa: E402
 from tools.epo_search_tools import register_epo_tools  # noqa: E402
 from tools.mpep_tools import register_mpep_tools  # noqa: E402
 from tools.patent_law_tools import register_patent_law_tools  # noqa: E402
-from tools.prior_art_tools import register_prior_art_tools  # noqa: E402
 from tools.system_tools import register_system_tools  # noqa: E402
 from tools.uspto_search_tools import register_uspto_tools  # noqa: E402
 
@@ -338,8 +316,6 @@ def _register_all_tools():
         SearchMPEPInput=SearchMPEPInput,
         track_performance=track_performance,
         log_operation_result=log_operation_result,
-        PYDANTIC_AVAILABLE=PYDANTIC_AVAILABLE,
-        BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,
     )
 
     register_analyzer_tools(
@@ -357,8 +333,6 @@ def _register_all_tools():
         CheckFormalitiesInput=CheckFormalitiesInput,
         track_performance=track_performance,
         log_operation_result=log_operation_result,
-        PYDANTIC_AVAILABLE=PYDANTIC_AVAILABLE,
-        BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,
     )
 
     # EPO/PCT analyzers
@@ -384,8 +358,6 @@ def _register_all_tools():
             CheckFormalitiesInput=CheckFormalitiesInput,
             track_performance=track_performance,
             log_operation_result=log_operation_result,
-            PYDANTIC_AVAILABLE=PYDANTIC_AVAILABLE,
-            BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,
         )
     except ImportError as e:
         _log_warning(f"EPO/PCT analyzer tools not available: {e}")
@@ -398,8 +370,6 @@ def _register_all_tools():
         SearchUSPTOInput=SearchUSPTOInput,
         GetPatentInput=GetPatentInput,
         track_performance=track_performance,
-        PYDANTIC_AVAILABLE=PYDANTIC_AVAILABLE,
-        BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,
     )
 
     register_epo_tools(
@@ -408,8 +378,6 @@ def _register_all_tools():
         log_error=_log_error,
         validate_input=validate_input,
         track_performance=track_performance,
-        PYDANTIC_AVAILABLE=PYDANTIC_AVAILABLE,
-        BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,
     )
 
     register_bigquery_tools(
@@ -422,20 +390,8 @@ def _register_all_tools():
         GetPatentInput=GetPatentInput,
         CPCSearchInput=CPCSearchInput,
         track_performance=track_performance,
-        PYDANTIC_AVAILABLE=PYDANTIC_AVAILABLE,
-        BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,
         IPCSearchInput=IPCSearchInput,
         FamilySearchInput=FamilySearchInput,
-    )
-
-    register_prior_art_tools(
-        mcp=mcp,
-        patent_corpus_index=patent_corpus_index,
-        log_info=_log_info,
-        log_error=_log_error,
-        log_warning=_log_warning,
-        track_performance=track_performance,
-        BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,
     )
 
     register_diagram_tools(
@@ -446,8 +402,6 @@ def _register_all_tools():
         validate_input=validate_input,
         RenderDiagramInput=RenderDiagramInput,
         track_performance=track_performance,
-        PYDANTIC_AVAILABLE=PYDANTIC_AVAILABLE,
-        BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,
     )
 
     register_patent_law_tools(
@@ -458,8 +412,6 @@ def _register_all_tools():
         validate_input=validate_input,
         SearchPatentLawInput=SearchPatentLawInput,
         track_performance=track_performance,
-        PYDANTIC_AVAILABLE=PYDANTIC_AVAILABLE,
-        BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,
     )
 
     register_system_tools(
@@ -467,7 +419,6 @@ def _register_all_tools():
         mpep_index=mpep_index,
         log_info=_log_info,
         log_error=_log_error,
-        BEST_PRACTICES_AVAILABLE=BEST_PRACTICES_AVAILABLE,
     )
 
 
@@ -641,8 +592,6 @@ def _run_health_checks():
     health_status = checker.check_all_dependencies(verbose=False)
 
     warnings = []
-    if not health_status["patent_corpus"].get("ready", False):
-        warnings.append("Patent corpus not available - prior art search will be limited")
     if not health_status["uspto_api"].get("available", False):
         warnings.append("USPTO API not configured - live patent search disabled")
     if health_status["gpu_status"].get("status") != "available":
@@ -658,51 +607,6 @@ def _run_health_checks():
         print("Run 'patent-creator status --verbose' for details.\n", file=sys.stderr)
     else:
         print("[OK] All systems operational\n", file=sys.stderr)
-
-
-def _auto_copy_claude_config():
-    """Automatically copy .claude config to current working directory if not present.
-
-    Can be disabled by setting PATENT_CREATOR_NO_AUTO_COPY=1 in the environment.
-    """
-    if os.environ.get("PATENT_CREATOR_NO_AUTO_COPY", "").strip() in ("1", "true", "yes"):
-        _log_info("Auto-copy disabled via PATENT_CREATOR_NO_AUTO_COPY")
-        return
-
-    try:
-        cwd = Path.cwd().resolve()
-        dest_claude = cwd / ".claude"
-        server_root = Path(__file__).parent.resolve()
-        source_claude = server_root / ".claude"
-
-        if not source_claude.exists():
-            _log_warning(
-                f".claude directory not found in MCP server installation at {source_claude}"
-            )
-            return
-
-        if dest_claude.exists():
-            _log_info(f".claude configuration already exists at {dest_claude}")
-            return
-
-        _log_info(f"Copying .claude configuration to {dest_claude}...")
-        dest_claude.mkdir(parents=True, exist_ok=True)
-        copied_count = 0
-
-        for item in source_claude.iterdir():
-            dest_item = dest_claude / item.name
-            try:
-                if item.is_dir():
-                    shutil.copytree(item, dest_item)
-                elif item.is_file():
-                    shutil.copy2(item, dest_item)
-                copied_count += 1
-            except Exception as e:
-                _log_warning(f"Failed to copy {item.name}: {e}")
-
-        _log_info(f"Successfully copied .claude configuration ({copied_count} items)")
-    except Exception as e:
-        _log_warning(f"Failed to auto-copy .claude configuration: {e}")
 
 
 # ============================================================================
@@ -750,9 +654,6 @@ def main():
 
     # Run health checks
     _run_health_checks()
-
-    # Auto-copy .claude configuration to current working directory
-    _auto_copy_claude_config()
 
     # Run the MCP server
     _log_info("Starting MCP server...")

@@ -25,8 +25,6 @@ def register_mpep_tools(
     SearchMPEPInput,
     track_performance,
     log_operation_result,
-    PYDANTIC_AVAILABLE,
-    BEST_PRACTICES_AVAILABLE,
 ):
     """Register MPEP search tools with the MCP server.
 
@@ -39,12 +37,10 @@ def register_mpep_tools(
         SearchMPEPInput: Pydantic model for search validation
         track_performance: Performance tracking decorator
         log_operation_result: Operation result logging function
-        PYDANTIC_AVAILABLE: Flag indicating if Pydantic is available
-        BEST_PRACTICES_AVAILABLE: Flag indicating if best practices modules are available
     """
 
     @mcp.tool()
-    @track_performance("tool_search_mpep") if BEST_PRACTICES_AVAILABLE else lambda f: f
+    @track_performance("tool_search_mpep")
     def search_mpep(
         query: str,
         top_k: int = 5,
@@ -61,21 +57,20 @@ def register_mpep_tools(
         """
         try:
             # Validate inputs
-            if PYDANTIC_AVAILABLE:
-                validated = validate_input(
-                    SearchMPEPInput,
-                    query=query,
-                    top_k=top_k,
-                    retrieve_k=retrieve_k,
-                    source_filter=source_filter,
-                    is_statute=is_statute,
-                    is_regulation=is_regulation,
-                    is_update=is_update,
-                )
-                query = validated.query
-                top_k = validated.top_k
-                retrieve_k = validated.retrieve_k
-                source_filter = validated.source_filter
+            validated = validate_input(
+                SearchMPEPInput,
+                query=query,
+                top_k=top_k,
+                retrieve_k=retrieve_k,
+                source_filter=source_filter,
+                is_statute=is_statute,
+                is_regulation=is_regulation,
+                is_update=is_update,
+            )
+            query = validated.query
+            top_k = validated.top_k
+            retrieve_k = validated.retrieve_k
+            source_filter = validated.source_filter
 
             log_info("search_mpep_tool_called", query_length=len(query), top_k=top_k)
 
@@ -123,11 +118,7 @@ def register_mpep_tools(
 
             formatted_results.append(result)
 
-        (
-            log_operation_result("search_mpep", results_count=len(formatted_results))
-            if BEST_PRACTICES_AVAILABLE
-            else None
-        )
+        log_operation_result("search_mpep", results_count=len(formatted_results))
         return formatted_results
 
     @mcp.tool()

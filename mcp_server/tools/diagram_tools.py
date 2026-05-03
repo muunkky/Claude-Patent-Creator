@@ -22,6 +22,25 @@ from pathlib import Path
 from typing import Any, Optional
 
 
+def _resolve_under_cwd(user_path: str, default_subdir: str) -> Path:
+    """Resolve a user-supplied path under cwd, rejecting any escape."""
+    cwd = Path.cwd().resolve()
+    if not user_path:
+        return cwd / default_subdir
+    candidate = Path(user_path)
+    if candidate.is_absolute():
+        candidate = candidate.resolve()
+    else:
+        candidate = (cwd / candidate).resolve()
+    try:
+        candidate.relative_to(cwd)
+    except ValueError as e:
+        raise ValueError(
+            f"path must be inside the project directory ({cwd}); got: {user_path}"
+        ) from e
+    return candidate
+
+
 def register_diagram_tools(
     mcp,
     log_info,
@@ -30,8 +49,6 @@ def register_diagram_tools(
     validate_input,
     RenderDiagramInput,
     track_performance,
-    PYDANTIC_AVAILABLE,
-    BEST_PRACTICES_AVAILABLE,
 ):
     """Register diagram generation tools with the MCP server.
 
@@ -43,12 +60,10 @@ def register_diagram_tools(
         validate_input: Input validation function
         RenderDiagramInput: Pydantic model for diagram validation
         track_performance: Performance tracking decorator
-        PYDANTIC_AVAILABLE: Flag indicating if Pydantic is available
-        BEST_PRACTICES_AVAILABLE: Flag indicating if best practices modules are available
     """
 
     @mcp.tool()
-    @track_performance("tool_render_diagram") if BEST_PRACTICES_AVAILABLE else lambda f: f
+    @track_performance("tool_render_diagram")
     def render_diagram(
         dot_code: str,
         filename: str = "diagram",
@@ -95,7 +110,7 @@ def register_diagram_tools(
                     "status": status,
                 }
 
-            target_dir = Path(output_dir) if output_dir else Path.cwd() / "diagrams"
+            target_dir = _resolve_under_cwd(output_dir, "diagrams")
             generator = PatentDiagramGenerator(output_dir=target_dir)
             output_path = generator.render_dot_diagram(
                 dot_code=dot_code,
@@ -115,7 +130,7 @@ def register_diagram_tools(
             return {"success": False, "error": f"Failed to render diagram: {str(e)}"}
 
     @mcp.tool()
-    @track_performance("tool_create_flowchart") if BEST_PRACTICES_AVAILABLE else lambda f: f
+    @track_performance("tool_create_flowchart")
     def create_flowchart(
         steps: list[dict[str, Any]], filename: str = "flowchart", output_format: str = "svg",
         output_dir: str = "",
@@ -157,7 +172,7 @@ def register_diagram_tools(
                     "error": f"Graphviz not installed. {status.get('message', 'See https://graphviz.org/download/')}",
                 }
 
-            target_dir = Path(output_dir) if output_dir else Path.cwd() / "diagrams"
+            target_dir = _resolve_under_cwd(output_dir, "diagrams")
             generator = PatentDiagramGenerator(output_dir=target_dir)
             output_path = generator.create_flowchart(
                 steps=steps, filename=filename, output_format=output_format
@@ -175,7 +190,7 @@ def register_diagram_tools(
             return {"success": False, "error": f"Failed to create flowchart: {str(e)}"}
 
     @mcp.tool()
-    @track_performance("tool_create_block_diagram") if BEST_PRACTICES_AVAILABLE else lambda f: f
+    @track_performance("tool_create_block_diagram")
     def create_block_diagram(
         blocks: list[dict[str, Any]],
         connections: list[list[str]],
@@ -229,7 +244,7 @@ def register_diagram_tools(
                 (conn[0], conn[1], conn[2] if len(conn) > 2 else None) for conn in connections
             ]
 
-            target_dir = Path(output_dir) if output_dir else Path.cwd() / "diagrams"
+            target_dir = _resolve_under_cwd(output_dir, "diagrams")
             generator = PatentDiagramGenerator(output_dir=target_dir)
             output_path = generator.create_block_diagram(
                 blocks=blocks,
@@ -251,7 +266,7 @@ def register_diagram_tools(
             return {"success": False, "error": f"Failed to create block diagram: {str(e)}"}
 
     @mcp.tool()
-    @track_performance("tool_add_diagram_references") if BEST_PRACTICES_AVAILABLE else lambda f: f
+    @track_performance("tool_add_diagram_references")
     def add_diagram_references(svg_path: str, reference_map: dict[str, int]) -> dict[str, Any]:
         """
         Add patent-style reference numbers to an existing SVG diagram.
@@ -269,10 +284,16 @@ def register_diagram_tools(
         try:
             from diagram_generator import PatentDiagramGenerator
 
-            generator = PatentDiagramGenerator()
-            input_path = Path(svg_path)
+            if not svg_path:
+                return {"success": False, "error": "svg_path is required"}
 
-            if not input_path.exists():
+            generator = PatentDiagramGenerator()
+            try:
+                input_path = _resolve_under_cwd(svg_path, "diagrams")
+            except ValueError as ve:
+                return {"success": False, "error": str(ve)}
+
+            if not input_path.is_file():
                 return {"success": False, "error": f"SVG file not found: {svg_path}"}
 
             output_path = generator.add_reference_numbers(
@@ -290,7 +311,7 @@ def register_diagram_tools(
             return {"success": False, "error": f"Failed to add references: {str(e)}"}
 
     @mcp.tool()
-    @track_performance("tool_get_diagram_templates") if BEST_PRACTICES_AVAILABLE else lambda f: f
+    @track_performance("tool_get_diagram_templates")
     def get_diagram_templates() -> dict[str, Any]:
         """
         Get common patent diagram templates in DOT language.
@@ -321,11 +342,7 @@ def register_diagram_tools(
             return {"success": False, "error": f"Failed to get templates: {str(e)}"}
 
     @mcp.tool()
-    @(
-        track_performance("tool_check_diagram_tools_status")
-        if BEST_PRACTICES_AVAILABLE
-        else lambda f: f
-    )
+    @track_performance("tool_check_diagram_tools_status")
     def check_diagram_tools_status() -> dict[str, Any]:
         """
         Check if diagram generation tools are installed and ready.

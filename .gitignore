@@ -63,3 +63,6 @@ htmlcov/
 NUL
 pyright_out*.txt
 ruff_out*.txt
+
+# Codebase reckoning workspace
+.codebase-reckoning/
