@@ -188,6 +188,22 @@ Your driver (581.80) supports:
 | CUDA 12.8 | `https://download.pytorch.org/whl/cu128` | ≥R555 | ✓ **Installed** |
 | CUDA 13.0 | `https://download.pytorch.org/whl/cu130` | ≥R560 | ✓ Supported |
 
+### GPU architecture and wheel selection
+
+The CUDA wheel is chosen automatically from your GPU's **compute capability**
+(detected via `nvidia-smi`), because the `cu128` wheels only ship compiled
+kernels for **Turing (sm_75) and newer**:
+
+| GPU architecture | Example cards | Compute capability | PyTorch wheel |
+|------------------|---------------|--------------------|---------------|
+| Blackwell / Ada / Ampere / Turing | RTX 50/40/30 series, RTX 20 series | ≥ 7.5 | `cu128` |
+| Pascal / Volta / Maxwell | GTX 10 series, Titan X, Tesla V100 | < 7.5 | `cu126` (torch 2.7.1) |
+
+Pre-Turing cards routed to `cu128` crash at kernel launch with
+`CUDA error: no kernel image is available for execution on the device`. The
+`cu126` build of torch 2.7.1 still bundles `sm_50`–`sm_90`, so those GPUs are
+sent there automatically.
+
 ## Troubleshooting
 
 ### "CUDA out of memory" errors
@@ -208,6 +224,27 @@ python -c "import torch; print(f'CUDA: {torch.cuda.is_available()}')"
 pip uninstall torch torchvision
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
 ```
+
+### "no kernel image is available for execution on the device"
+
+Your PyTorch build has no compiled kernels for your GPU's architecture —
+typically a pre-Turing card (GTX 10-series and older, compute capability < 7.5)
+that received a `cu128` build. Reinstall the `cu126` build, which includes
+`sm_50`–`sm_90`:
+
+```powershell
+pip uninstall -y torch torchvision
+pip install torch==2.7.1 torchvision==0.22.1 --index-url https://download.pytorch.org/whl/cu126
+```
+
+Confirm your GPU's architecture is now supported:
+
+```powershell
+python -c "import torch; print(torch.cuda.get_arch_list())"
+```
+
+`patent-creator setup` selects the correct wheel automatically, so this is only
+needed for manual installs.
 
 ### Multiple Python installations conflict
 
