@@ -61,15 +61,20 @@ def install_pytorch(gpu_available=False, compute_cap=None):
         cmd = f"{sys.executable} -m pip install torch torchvision"
         return run_command(cmd, "Installing PyTorch (CPU)")
 
-    # RTX 5090/5080 (compute 12.0+) need CUDA 12.8, older GPUs use 12.8 too
-    if compute_cap and compute_cap >= 10.0:
-        cuda_pkg = "cu128"
-        cuda_name = "12.8"
+    # cu128 wheels only ship kernels for sm_75+ (Turing and newer). Pre-Turing
+    # GPUs (Pascal sm_61, Volta sm_70, Maxwell sm_5x) crash at kernel launch
+    # with "no kernel image is available for execution on the device". For those
+    # we pin the cu126 build of torch 2.7.1, which still bundles sm_50..sm_90.
+    if compute_cap is not None and compute_cap < 7.5:
+        torch_spec = "torch==2.7.1 torchvision==0.22.1"
+        cuda_pkg = "cu126"
+        cuda_name = "12.6"
         print("\n" + "=" * 60)
-        print(f"RTX 5090/5080 detected (Compute {compute_cap}) - Installing CUDA {cuda_name}")
+        print(f"Legacy NVIDIA GPU detected (Compute {compute_cap}) - Installing CUDA {cuda_name}")
         print("=" * 60)
     else:
-        cuda_pkg = "cu128"  # Default to 12.8 for best compatibility
+        torch_spec = "torch torchvision"
+        cuda_pkg = "cu128"  # Turing and newer
         cuda_name = "12.8"
         print("\n" + "=" * 60)
         print(f"NVIDIA GPU detected - Installing CUDA {cuda_name} version")
@@ -82,7 +87,7 @@ def install_pytorch(gpu_available=False, compute_cap=None):
         capture_output=True,
     )
 
-    cmd = f"{sys.executable} -m pip install torch torchvision --index-url https://download.pytorch.org/whl/{cuda_pkg}"
+    cmd = f"{sys.executable} -m pip install {torch_spec} --index-url https://download.pytorch.org/whl/{cuda_pkg}"
     return run_command(cmd, f"Installing PyTorch (CUDA {cuda_name})")
 
 

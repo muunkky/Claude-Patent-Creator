@@ -99,8 +99,10 @@ def install_pytorch():
     except Exception:
         pass  # Ignore errors
 
-    # Build pip install command
-    cmd = [sys.executable, "-m", "pip", "install", package_spec]
+    # Build pip install command. package_spec may contain multiple
+    # whitespace-separated requirements (e.g. pinned torch + torchvision for
+    # legacy GPUs), so split it into individual pip arguments.
+    cmd = [sys.executable, "-m", "pip", "install", *package_spec.split()]
     if index_url:
         cmd.extend(["--index-url", index_url])
 

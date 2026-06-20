@@ -17,6 +17,27 @@ def detect_nvidia_gpu():
         return False
 
 
+def get_nvidia_compute_capability():
+    """Return the highest NVIDIA GPU compute capability as a float, or None.
+
+    e.g. GTX 1080 (Pascal) -> 6.1, RTX 3090 (Ampere) -> 8.6, RTX 5090 -> 12.0
+    """
+    try:
+        result = subprocess.run(
+            ["nvidia-smi", "--query-gpu=compute_cap", "--format=csv,noheader"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0:
+            caps = [float(line.strip()) for line in result.stdout.splitlines() if line.strip()]
+            if caps:
+                return max(caps)
+    except (subprocess.TimeoutExpired, FileNotFoundError, ValueError):
+        pass
+    return None
+
+
 def detect_apple_silicon():
     """Detect if running on Apple Silicon (M1/M2/M3)"""
     if platform.system() != "Darwin":
@@ -41,6 +62,19 @@ def get_pytorch_install_command():
     has_apple_silicon = detect_apple_silicon()
 
     if has_nvidia:
+        compute_cap = get_nvidia_compute_capability()
+        # cu128 wheels only ship compiled kernels for sm_75+ (Turing and newer).
+        # Pre-Turing cards (Pascal sm_61, Volta sm_70, Maxwell sm_5x) get a
+        # "no kernel image is available for execution on the device" error with
+        # cu128. The cu126 build of torch 2.7.1 still bundles sm_50..sm_90, so
+        # route older GPUs there. Unknown capability falls through to cu128.
+        if compute_cap is not None and compute_cap < 7.5:
+            return (
+                "torch==2.7.1 torchvision==0.22.1",
+                "https://download.pytorch.org/whl/cu126",
+                f"[GPU] NVIDIA GPU (compute {compute_cap}) detected - installing "
+                "PyTorch 2.7.1 with CUDA 12.6 (legacy GPU architecture support)",
+            )
         return (
             "torch>=2.0.0",
             "https://download.pytorch.org/whl/cu128",
@@ -84,6 +118,25 @@ def check_pytorch_installation():
         if has_nvidia and not cuda_available:
             status["hardware_match"] = False
             status["warning"] = "NVIDIA GPU detected but PyTorch has no CUDA support"
+
+        # CUDA can report "available" while still lacking compiled kernels for
+        # this specific GPU architecture. That manifests at kernel-launch time
+        # as "no kernel image is available for execution on the device". Detect
+        # it up front by checking the device's compute capability against the
+        # architectures this PyTorch build was compiled for.
+        if has_nvidia and cuda_available:
+            try:
+                major, minor = torch.cuda.get_device_capability(0)
+                cap_tag = f"sm_{major}{minor}"
+                arch_list = torch.cuda.get_arch_list()
+                if arch_list and cap_tag not in arch_list:
+                    status["hardware_match"] = False
+                    status["warning"] = (
+                        f"PyTorch {torch.__version__} has no compiled kernels for "
+                        f"this GPU ({cap_tag}); build supports {arch_list}"
+                    )
+            except Exception:
+                pass
 
         # Check if Apple Silicon
         if detect_apple_silicon():
