@@ -4,6 +4,7 @@ Automatic GPU/CPU Detection and PyTorch Installation
 Detects hardware and installs the correct PyTorch version automatically
 """
 
+import contextlib
 import platform
 import subprocess
 import sys
@@ -43,9 +44,18 @@ def get_compute_capability():
             timeout=5,
         )
         if result.returncode == 0:
-            compute_cap = result.stdout.strip()
-            if compute_cap:
-                return float(compute_cap)
+            # nvidia-smi emits one compute_cap per GPU; parse each line and
+            # return the MINIMUM so the oldest GPU in the system drives wheel
+            # selection (cu126 covers sm_50-sm_90). Non-numeric lines (warnings,
+            # headers) are skipped rather than failing the whole detection.
+            caps = []
+            for line in result.stdout.splitlines():
+                cleaned = line.strip()
+                if cleaned:
+                    with contextlib.suppress(ValueError):
+                        caps.append(float(cleaned))
+            if caps:
+                return min(caps)
     except Exception:
         pass
     return None

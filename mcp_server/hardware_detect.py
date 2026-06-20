@@ -4,6 +4,7 @@ Hardware detection for automatic PyTorch installation
 Detects GPU type and determines correct PyTorch version
 """
 
+import contextlib
 import platform
 import subprocess
 
@@ -18,9 +19,15 @@ def detect_nvidia_gpu():
 
 
 def get_nvidia_compute_capability():
-    """Return the highest NVIDIA GPU compute capability as a float, or None.
+    """Return the LOWEST NVIDIA GPU compute capability as a float, or None.
 
-    e.g. GTX 1080 (Pascal) -> 6.1, RTX 3090 (Ampere) -> 8.6, RTX 5090 -> 12.0
+    nvidia-smi reports one compute_cap per GPU. We return the minimum so the
+    oldest card in the system drives wheel selection: cu126 covers sm_50-sm_90,
+    so if any GPU is pre-Turing the whole system must use cu126. Non-numeric
+    lines (warnings, headers) are skipped rather than failing detection.
+
+    e.g. GTX 1080 (Pascal) -> 6.1, RTX 3090 (Ampere) -> 8.6, RTX 5090 -> 12.0;
+    a mixed 6.1 + 8.6 system -> 6.1.
     """
     try:
         result = subprocess.run(
@@ -30,10 +37,15 @@ def get_nvidia_compute_capability():
             timeout=5,
         )
         if result.returncode == 0:
-            caps = [float(line.strip()) for line in result.stdout.splitlines() if line.strip()]
+            caps = []
+            for line in result.stdout.splitlines():
+                cleaned = line.strip()
+                if cleaned:
+                    with contextlib.suppress(ValueError):
+                        caps.append(float(cleaned))
             if caps:
-                return max(caps)
-    except (subprocess.TimeoutExpired, FileNotFoundError, ValueError):
+                return min(caps)
+    except (subprocess.TimeoutExpired, FileNotFoundError):
         pass
     return None
 
@@ -126,15 +138,21 @@ def check_pytorch_installation():
         # architectures this PyTorch build was compiled for.
         if has_nvidia and cuda_available:
             try:
-                major, minor = torch.cuda.get_device_capability(0)
-                cap_tag = f"sm_{major}{minor}"
                 arch_list = torch.cuda.get_arch_list()
-                if arch_list and cap_tag not in arch_list:
-                    status["hardware_match"] = False
-                    status["warning"] = (
-                        f"PyTorch {torch.__version__} has no compiled kernels for "
-                        f"this GPU ({cap_tag}); build supports {arch_list}"
-                    )
+                if arch_list:
+                    # Check every CUDA device: device 0 may be supported while a
+                    # second, older GPU in the system is not.
+                    for i in range(torch.cuda.device_count()):
+                        major, minor = torch.cuda.get_device_capability(i)
+                        cap_tag = f"sm_{major}{minor}"
+                        if cap_tag not in arch_list:
+                            status["hardware_match"] = False
+                            status["warning"] = (
+                                f"PyTorch {torch.__version__} has no compiled kernels "
+                                f"for GPU {i} ({torch.cuda.get_device_name(i)}, "
+                                f"{cap_tag}); build supports {arch_list}"
+                            )
+                            break
             except Exception:
                 pass
 
