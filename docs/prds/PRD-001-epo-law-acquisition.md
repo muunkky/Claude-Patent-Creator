@@ -68,7 +68,25 @@ emits the exact `PART X - TITLE` plus `### {title} [{stem}]` layout that
 `extract_text_from_epo_guidelines()` keys on (it matches `^PART\s+([A-H])\s*[-–]\s*…`
 for parts and `^(?:###+|####)\s*(.+)` for sections). It is a proven starting point,
 not throwaway exploration — the production fix should build from it rather than reinvent
-discovery and parsing.
+discovery and parsing. The prototype is not production-clean: it hardcodes the edition
+year (`YEAR = "2026"`), carries a typo in its part-title table
+(`PART_TITLES["c"] = "Procedureal aspects of substantive examination"`), and was written
+to discover-and-dump rather than to validate. These must be reconciled before the code
+is promoted — see Non-Goals and the Phase 2 launch criteria.
+
+**The acquisition layer is also not wired into any documented build path.** This is a
+third defect, independent of the two acquisition bugs and just as fatal to the product
+promise. Verified against the CLI: `setup_command` (`cli.py:432`) downloads only
+MPEP / 35 USC / 37 CFR / Subsequent Publications and never calls
+`download_all_epo_documents`; `rebuild_index_command` (`cli.py:851`) downloads nothing
+at all; `download_all_command` (`cli.py:889`) is MPEP + 35 USC + 37 CFR only. The
+*only* code path that invokes EPO acquisition is in `server.py:507-519`, gated behind
+`--download-epo` / `--download-all` flags that `setup` never passes. The consequence is
+decisive: even if `download_epc()` and `scrape_epo_guidelines()` were fixed perfectly
+today, a clean `patent-creator setup` would still produce an **empty European corpus**,
+because nothing on the documented install path ever triggers the acquisition. Fixing the
+two acquisition bugs is necessary but not sufficient; the acquisition must be wired into
+the command an operator actually runs.
 
 **Why now.** The indexer-side fixes that made this work *possible* already landed on
 `main`: the `extract_text_from_epc` trilingual-PDF parser was rewritten, and the
@@ -111,16 +129,23 @@ and a searchable European corpus is the acquisition layer. This is the last mile
 ## Goals & Non-Goals
 
 ### Goals
-- A clean, from-scratch index build ingests genuine, in-force EPC text and in-force
-  EPO Guidelines text with zero manual artifact placement.
+- A clean, from-scratch index build **run via a documented command** ingests genuine,
+  in-force EPC text and in-force EPO Guidelines text with zero manual artifact placement.
+  This explicitly includes *wiring* EPO acquisition into whichever documented command
+  the operator runs to build the corpus — fixing the downloaders alone does not satisfy
+  this goal (see Background and Phase 3).
 - `download_epc()` reliably acquires a real EPC PDF (resolving the WIPO Lex signed
   CloudFront URL), not an HTML landing page.
 - The EPO Guidelines acquisition produces `epo_guidelines.txt` — the artifact the
-  indexer actually reads — from the in-force HTML edition, in the format the indexer
-  parses.
+  indexer actually reads — from the **in-force edition selected deterministically**
+  (discovered from the EPO's canonical current-Guidelines entry point, not a hardcoded
+  year), in the format the indexer parses.
 - No orphaned or non-authoritative artifacts (draft PDFs, HTML-as-PDF) are produced.
 - Acquisition is resilient to transient network failures and polite to external hosts,
   given the Guidelines scrape is on the order of ~1,887 requests.
+- Idempotency is keyed on an **artifact-validity predicate**, not file existence: a
+  valid existing artifact is skipped; an invalid one (HTML-as-PDF, stub `.txt`) is
+  re-acquired. The current `dest_path.exists()` short-circuits are replaced.
 - A failed or partial acquisition is observable, not silent.
 
 ### Non-Goals
@@ -164,14 +189,18 @@ $ patent-creator setup        # or: patent-creator rebuild-index
 [INFO]   1887/1887 fetched (1881 with content)
 [INFO] Wrote epo_guidelines.txt (4.9 MB, 1881/1887 sections with content)
 [INFO] Processing EPC (European Patent Convention + Implementing Regulations)...
-[INFO] Extracted 612 EPC chunks
+[INFO] Extracted N EPC chunks (hundreds — articles + Implementing Regulations)
 [INFO] Processing EPO Guidelines for Examination...
-[INFO] Extracted 7044 EPO Guidelines chunks
+[INFO] Extracted M EPO Guidelines chunks (thousands)
 ```
 
 The user did not place any file by hand. The log states which jurisdiction was
-acquired, how much content was retrieved, and how many chunks were indexed. (Exact
-counts above are illustrative; the launch criteria define the floors that matter.)
+acquired, how much content was retrieved, and how many chunks were indexed. Chunk
+counts are deliberately shown as placeholders (`N`, `M`) rather than fixed numbers:
+the EPC currently lands ~hundreds of chunks (the parser already in `main` splits the
+PDF into article and Implementing-Regulations chunks) and the Guidelines land
+thousands. The launch criteria below define the *floors* that matter — do not treat any
+specific number in this PRD as a regression target.
 
 ### Scenario 2: The user queries European law and gets real, in-force text
 
@@ -191,9 +220,28 @@ passage — not a single junk chunk, not an empty result, not draft-consultation
 
 A user who already has valid `epc_convention.pdf` and `epo_guidelines.txt` in `pdfs/`
 and re-runs the build does not trigger a fresh ~1,887-request scrape or re-download.
-Acquisition recognizes the existing valid artifacts and skips re-fetching them, while
-still treating a *bad* existing artifact (HTML-as-PDF, empty/stub text) as needing
-re-acquisition.
+Acquisition recognizes the existing artifacts as *valid by the artifact-validity
+predicate* (defined in the Success Criteria and Phase 3) — not merely as *present* — and
+skips re-fetching them. A *bad* existing artifact (a 28 KB HTML-as-PDF, an empty or stub
+`.txt`) does **not** satisfy the predicate, so it is treated as needing re-acquisition.
+This is a deliberate departure from today's behavior: the current `_download_file`
+(`epo_downloaders.py:92`) and `scrape_epo_guidelines` (`epo_downloaders.py:185`)
+short-circuit on `dest_path.exists()` alone, which is exactly why a 28 KB HTML file
+saved under `epc_convention.pdf` counts as "already downloaded" and is never repaired.
+Those existence short-circuits must be replaced by the validity predicate.
+
+### Scenario 4: The build acquires the in-force Guidelines edition without a code change
+
+A user installs in a year *after* the prototype was written. The EPO has published a
+new annual Guidelines edition since. The build still acquires the *currently in-force*
+edition — because acquisition discovers the in-force edition from the EPO's canonical
+"current Guidelines" entry point and reads where it points, rather than from a hardcoded
+`YEAR` constant. The operator does not have to know which edition is current, and the
+system does not silently scrape a superseded edition (the "stale law presented as
+binding" defect this PRD exists to prevent). If the project instead chooses to pin the
+edition for this cycle, the build emits the pinned edition in its log *and* a drift
+check flags when the EPO's published in-force edition no longer matches the pin — so the
+staleness is loud, not silent.
 
 ### Error & Edge Cases
 
@@ -219,13 +267,13 @@ re-acquisition.
 
 | Criterion | Measurement | Target |
 |-----------|-------------|--------|
-| EPC artifact is a real PDF | File type of `pdfs/epc_convention.pdf` after a clean build | Valid PDF (magic bytes / content-type), not HTML |
-| EPC indexes richly | EPC chunk count reported by `build_index` | Many chunks (hundreds), not 1 junk chunk |
-| Guidelines artifact is the one the indexer reads | `epo_guidelines.txt` exists and is non-trivial after a clean build | Present, in `PART/###` format, multi-MB |
-| Guidelines are in-force, not draft | Source edition scraped | In-force current edition (e.g. 2026 `/en/`), no `…-draft-…` artifact present |
+| EPC artifact satisfies the validity predicate | `pdfs/epc_convention.pdf` after a clean build | PDF magic bytes (`%PDF`) **and** size ≥ a defined floor **and** parser extracts more than a defined minimum number of EPC provisions — not just "file exists" |
+| EPC indexes richly | EPC chunk count reported by `build_index` | Many chunks (hundreds — articles + Implementing Regulations), not 1 junk chunk; floor defined in Phase 1 launch criteria, not pinned to a specific number here |
+| Guidelines artifact satisfies the validity predicate | `pdfs/epo_guidelines.txt` after a clean build | Present, in `PART/###` format, size ≥ a defined floor, parses into ≥ a defined minimum number of Guidelines chunks, and section-success ratio ≥ the Phase 2 floor — not just "file exists" |
+| Guidelines are the in-force edition, selected deterministically | Edition actually scraped vs. the edition the EPO's canonical "current Guidelines" entry point resolves to | Scraped edition **==** the EPO's currently-published in-force edition (resolved at build time); **no** `…-draft-…` consultation artifact present. (Not "e.g. 2026" — the check is equality against whatever is in force on the build date.) |
 | No orphaned artifacts | Files left in `pdfs/` after build | No `epo_guidelines_{year}.pdf` draft, no HTML-as-PDF |
 | End-to-end EU search works | `search_patent_law(query="claim clarity requirement", jurisdiction="EPO")` after a from-scratch build | Returns real EPC Art. 84 text and an EPO Guidelines clarity passage |
-| Zero manual steps | Operator actions required to populate EU corpus | None beyond the documented `setup` / `rebuild-index` command |
+| Zero manual steps, on a command that actually triggers acquisition | Operator actions required to populate the EU corpus, running the *documented post-fix command* (after wiring lands — see Phase 3) | None beyond running that single documented command; the EU corpus is non-empty afterward. Today this fails: `setup` / `rebuild-index` / `download-all` never invoke EPO acquisition. |
 | Acquisition is observable | Build log on success and on failure | States per-source acquisition outcome and counts; failures are logged, not silent |
 
 ## Scope & Boundaries
@@ -233,15 +281,36 @@ re-acquisition.
 ### In Scope
 - Fixing `download_epc()` to fetch the WIPO Lex landing page, extract the signed
   CloudFront asset URL, download the genuine EPC PDF, and validate it is a PDF before
-  persisting it as `epc_convention.pdf`.
+  persisting it as `epc_convention.pdf`. (Also: refresh the stale
+  `download_epc` docstring, which currently claims "The EPO HTML version is more current"
+  — written for the abandoned approach.)
 - Replacing the EPO Guidelines acquisition so it produces an in-force
   `epo_guidelines.txt` (building on `scripts/_epo_guidelines_scrape.py`) in the
   indexer's expected format, and removing the orphaned-draft-PDF behavior.
-- Resilience (retry/backoff), politeness (request pacing), and validation (artifact
-  integrity checks) for both acquisition paths.
+- **Deterministic in-force-edition selection**: discover the in-force Guidelines edition
+  from the EPO's canonical current-Guidelines entry point at build time rather than the
+  prototype's hardcoded `YEAR = "2026"`. (If the project elects to pin the edition for a
+  given cycle instead, the pin becomes a tracked maintenance obligation with drift
+  detection — see Open Questions.)
+- **Promoting the prototype to production quality**: clean up
+  `scripts/_epo_guidelines_scrape.py` before it ships — fix the
+  `PART_TITLES["c"]` typo (`"Procedureal aspects of substantive examination"`) and
+  reconcile the Part C wording, and remove the hardcoded edition assumption.
+- **Replacing the existence short-circuits with an artifact-validity predicate.** Tie
+  idempotency (skip-if-valid) to the predicate defined in Success Criteria — PDF magic
+  bytes + size floor + parsed-provision floor for EPC; size floor + chunk-parse floor +
+  section-success ratio for the Guidelines — not to `dest_path.exists()` at
+  `epo_downloaders.py:92` and `:185`.
+- Resilience (retry/backoff), politeness (request pacing), and validation (the
+  artifact-validity predicate above) for both acquisition paths.
 - Observability: per-source success/failure logging with content/section/chunk counts.
-- Wiring the corrected acquisition into the existing `download_all_epo_documents()` /
-  setup / rebuild path so a clean build invokes it automatically.
+- **Wiring the corrected acquisition into the documented build path** so that the single
+  command an operator runs (`setup` and/or `rebuild-index`, per the default-on vs.
+  flag-gated decision in Open Questions) invokes EPO acquisition automatically. Today no
+  documented command does — `setup_command`, `rebuild_index_command`, and
+  `download_all_command` all skip EPO entirely; the only EPO path is behind the
+  `--download-epo` / `--download-all` flags on `server.py`, which `setup` never passes.
+  This is a first-class deliverable, not a footnote.
 
 ### Out of Scope
 - `extract_text_from_epc` parser and `build_index` `KeyError: 'page'` — already fixed
@@ -259,14 +328,19 @@ re-acquisition.
   markup and the EPO Guidelines URL scheme still match assumptions, so the next silent
   breakage is caught proactively rather than at query time.
 - **Pinning a known-good EPC edition** vs. always taking WIPO's "latest", once edition
-  stability is understood.
+  stability is understood. (Distinct from the EPO Guidelines edition selection, which is
+  an in-scope requirement, not a future consideration — the EPC's WIPO PDF is far more
+  stable than the EPO's annually-republished Guidelines.)
 
 ## Delivery Phases
 
 This is a focused fix, not a multi-quarter initiative. It splits into two
-independently valuable phases — each repairs one jurisdiction-critical source on its
-own — plus a small hardening pass. Either phase shipping alone is a real improvement;
-together they complete the story.
+source-repair phases — each repairs one jurisdiction-critical source on its own — plus a
+hardening-and-wiring phase that is **load-bearing, not cosmetic**: without it, the fixed
+downloaders are never invoked by any command an operator runs, so the European corpus
+stays empty on a clean install. Phases 1 and 2 each fix an acquisition function in
+isolation and are individually verifiable; Phase 3 is what turns those fixes into a
+product the documented install path actually delivers.
 
 ### Phase 1: EPC acquires as a real PDF
 
@@ -278,14 +352,15 @@ together they complete the story.
   returns real EPC Art. 84 text.
 
 **Launch criteria:**
-- After a from-scratch build, `epc_convention.pdf` is a valid PDF and the EPC chunk
-  count is in the hundreds, not 1.
+- After a from-scratch build, `epc_convention.pdf` satisfies the EPC artifact-validity
+  predicate (PDF magic bytes + size floor + parser extracts more than the minimum
+  provisions) and the EPC chunk count is in the hundreds, not 1.
 - A failure to resolve/download the PDF is logged clearly and leaves no junk `.pdf`.
 
 **Decisions needed:**
 - ADR on the EPC acquisition strategy: how the signed CloudFront URL is extracted
-  (and how robust that is to WIPO markup changes), what artifact validation gate
-  applies, and the failure-handling contract.
+  (and how robust that is to WIPO markup changes), the EPC artifact-validity predicate
+  (the gate that replaces `dest_path.exists()`), and the failure-handling contract.
 
 **Dependencies:**
 - The already-landed `extract_text_from_epc` rewrite on `main` (present).
@@ -296,42 +371,86 @@ together they complete the story.
 - EPO Guidelines acquisition that scrapes the in-force HTML edition into
   `epo_guidelines.txt` in the indexer's `PART/###` format, built from
   `scripts/_epo_guidelines_scrape.py`, with retry/backoff and request pacing.
+- **Deterministic in-force-edition selection**: the edition is discovered from the EPO's
+  canonical current-Guidelines entry point at build time — replacing the prototype's
+  hardcoded `YEAR = "2026"`. (If the project pins instead, the pin is logged and a drift
+  check is added per Open Questions.)
+- **Prototype cleanup for promotion**: the `PART_TITLES["c"]` typo
+  (`"Procedureal aspects of substantive examination"`) and Part C wording are fixed and
+  reconciled before the scraper ships.
 - The orphaned draft-PDF download path is removed; no `epo_guidelines_{year}.pdf` is
   produced.
 - A clean build indexes the Guidelines into thousands of chunks;
   `search_patent_law(jurisdiction="EPO")` returns a real Guidelines clarity passage.
 
 **Launch criteria:**
-- After a from-scratch build, `epo_guidelines.txt` is present, multi-MB, and parses
-  into many Guidelines chunks; section success ratio clears a defined floor.
+- After a from-scratch build, `epo_guidelines.txt` satisfies the artifact-validity
+  predicate (present, `PART/###` format, size ≥ floor, parses into ≥ the minimum chunk
+  count, section-success ratio ≥ the defined floor).
+- The edition scraped equals the EPO's currently-published in-force edition (resolved at
+  build time) — verified deterministically, not against a hardcoded year.
 - No draft/consultation artifact remains in `pdfs/`.
 - The scrape completes within an acceptable wall-clock and request-rate budget.
 
 **Decisions needed:**
-- ADR on the Guidelines acquisition strategy: section discovery method, success-ratio
-  threshold for declaring the scrape valid, politeness/rate budget, and how a partial
-  scrape is prevented from masquerading as complete.
+- ADR on the Guidelines acquisition strategy: section discovery method, **in-force-edition
+  selection mechanism (discover-from-canonical-entry-point vs. pin-with-drift-detection)**,
+  the artifact-validity predicate and success-ratio threshold for declaring the scrape
+  valid, politeness/rate budget, and how a partial scrape is prevented from masquerading
+  as complete.
 
 **Dependencies:**
 - The indexer's `extract_text_from_epo_guidelines()` `PART/###` contract (present on
   `main`), which acquisition must match exactly.
 
-### Phase 3: Hardening — validation, idempotency, observability
+### Phase 3: Wiring + hardening — make a clean install actually populate the EU corpus
+
+This phase is what makes the story *true* for a real operator. Phases 1 and 2 can be
+"done" and the product still ship an empty EU corpus, because no documented command
+invokes EPO acquisition. This phase closes that gap and locks in the validity/idempotency
+guarantees the earlier phases depend on.
 
 **What ships:**
-- Artifact-integrity gates for both sources (don't persist non-PDF as PDF; don't
-  persist a thin/empty `.txt` as a complete corpus).
-- Idempotency: existing *valid* artifacts are skipped on rebuild; existing *invalid*
-  artifacts are re-acquired.
-- Per-source acquisition logging with counts surfaced through the setup/rebuild flow.
+- **EPO acquisition wired into the documented build path.** Whichever command the
+  operator is told to run to build the corpus invokes `download_all_epo_documents` (and
+  the PCT equivalent already gated the same way) — closing the gap where `setup_command`,
+  `rebuild_index_command`, and `download_all_command` skip EPO entirely and the only
+  trigger lives behind `server.py`'s `--download-epo` / `--download-all` flags. This is
+  the deliverable that turns Phases 1–2 into out-of-box behavior.
+- The artifact-validity predicate (defined in Success Criteria) implemented for both
+  sources, **replacing** the `dest_path.exists()` short-circuits at
+  `epo_downloaders.py:92` and `:185`.
+- Idempotency keyed on that predicate: existing *valid* artifacts are skipped on rebuild;
+  existing *invalid* artifacts (HTML-as-PDF, stub `.txt`) are re-acquired.
+- Per-source acquisition logging with counts surfaced through the build flow.
 
 **Launch criteria:**
-- A rebuild with valid artifacts present does not re-download/re-scrape.
-- A rebuild with a bad artifact present re-acquires it.
+- Running the single documented command on a clean machine produces a **non-empty EU
+  corpus** with no manual artifact placement — the end-to-end search criterion passes
+  from a from-scratch install, not just from a hand-run `server.py --download-epo`.
+- A rebuild with valid artifacts present (per the predicate) does not re-download/re-scrape.
+- A rebuild with a bad artifact present re-acquires it (existence alone does not satisfy
+  skip).
 - Every acquisition outcome (success or failure, with counts) appears in the build log.
 
 **Decisions needed:**
-- None expected beyond the Phase 1/2 ADR(s); this phase implements their contracts.
+- **Product decision — default-on vs. flag-gated EPO acquisition in `setup`.** Should a
+  fresh `patent-creator setup` acquire EPO law by default (adding the ~1,887-request
+  Guidelines scrape and its wall-clock to *every* clean install's critical path), or be
+  opt-in via a flag (preserving fast US-only installs for users who never touch EPO)?
+  - *Default-on* maximizes out-of-box completeness — the advertised "Ready" EPO features
+    work on first query with zero extra steps — at the cost of setup wall-clock and
+    rate-limit/blocking exposure for users who never need EPO.
+  - *Flag-gated* keeps the baseline install fast and low-risk but means the EU corpus is
+    still empty after a default `setup`, so the "zero manual steps" promise only holds for
+    users who know to pass the flag — which re-creates a softer version of today's defect.
+  - A reasonable middle path (default-on for `setup`, with an explicit `--skip-epo`
+    escape hatch, or default-on only when EPO skills are detected as in use) is in scope
+    for the ADR to weigh. The choice determines which command the "zero manual steps"
+    success criterion is measured against.
+- Whether `setup` and `rebuild-index` are *both* wired, or only one is the canonical
+  corpus-build command (today `rebuild_index_command` downloads nothing, so it would also
+  need wiring to be a complete path).
 
 **Dependencies:**
 - Phases 1 and 2.
@@ -363,13 +482,28 @@ author — not architecture prescriptions.
   section headers (matched by `^(?:###+|####)\s*(.+)`). Acquisition output that does not
   match these patterns indexes incorrectly even if the fetch "succeeds." The reference
   prototype already emits this format.
-- **In-force vs. draft is a correctness property, not a nicety.** Indexing draft
-  consultation text would present non-authoritative guidance as binding examination
-  practice — a substantive correctness defect for a legal-research tool. The acquisition
-  must target the in-force edition.
-- **Idempotency interacts with the cost model.** A full re-scrape on every rebuild is
-  ~1,887 requests; acquisition should skip re-fetching valid existing artifacts so
-  routine rebuilds stay cheap, while still re-acquiring known-bad ones.
+- **In-force vs. draft — and in-force vs. *superseded* — is a correctness property, not a
+  nicety.** Indexing draft consultation text would present non-authoritative guidance as
+  binding examination practice. Equally bad: scraping last year's edition because the
+  edition was hardcoded (`YEAR = "2026"`). The EPO publishes a new Guidelines edition
+  roughly annually, so a pinned year silently rots into "stale law presented as binding"
+  on a predictable schedule. The acquisition must select the in-force edition
+  *deterministically* — discover it from the EPO's canonical current-Guidelines entry
+  point, or pin it with explicit drift detection — never assume a fixed year.
+- **Idempotency must key on validity, not existence.** Today the downloaders skip on
+  `dest_path.exists()` alone (`epo_downloaders.py:92`, `:185`), which is precisely why a
+  28 KB HTML-as-PDF and an orphaned/stale text file are treated as "already downloaded"
+  and never repaired. The skip decision must be gated on an artifact-validity predicate
+  (PDF magic bytes + size + parsed-provision floor for EPC; size + chunk-parse floor +
+  section-success ratio for the Guidelines). A full re-scrape is ~1,887 requests, so a
+  *valid* artifact should be skipped to keep rebuilds cheap — but a *present-but-invalid*
+  one must be re-acquired.
+- **Fixing acquisition is necessary but not sufficient — it must be invoked.** The
+  acquisition functions are dead code from the operator's perspective until the
+  documented build command calls them. The product constraint is end-to-end: a single
+  documented command on a clean machine must yield a non-empty EU corpus. The ADR must
+  decide where that wiring lives and whether it is default-on or flag-gated (see Open
+  Questions), because that choice determines the install-time cost every user pays.
 - **Observability for the build operator.** Success counts (PDF size, sections fetched,
   chunks produced) and clear per-source failure messages are the only signal the
   operator has that the EU corpus is healthy. These are product requirements, not
@@ -386,11 +520,25 @@ author — not architecture prescriptions.
 | Scrape wall-clock makes a clean build feel slow | Operator friction during setup | Medium | Pace deliberately but acceptably; idempotency means the cost is paid once, not every rebuild |
 | Signed CloudFront URL expires between extraction and download | Intermittent EPC download failure | Low | Extract and download in the same flow with retry; validate result |
 | WIPO "latest" EPC edition shifts unexpectedly | Corpus changes without notice | Low | Acquire latest by default now; pin a known-good edition as a future consideration |
+| **Hardcoded Guidelines edition (`YEAR = "2026"`) silently scrapes a superseded edition after the EPO publishes the next annual edition** | Stale, non-binding law presented as in-force — the exact correctness defect this PRD forbids | **High** (the EPO publishes ~annually, so the hardcode rots on a known schedule) | Discover the in-force edition from the EPO's canonical current-Guidelines entry point at build time; OR, if pinned, treat the pin as a tracked maintenance obligation with drift detection that fails/warns when the published in-force edition no longer matches |
+| **Fixed downloaders never wired into the documented build path** | Clean install ships an empty EU corpus despite the acquisition bugs being fixed | **High if not explicitly delivered** (current state — no documented command invokes EPO acquisition) | Phase 3 makes wiring a first-class deliverable; the "non-empty EU corpus from one documented command" launch criterion gates it |
 
 ### Open Questions
+- **Should EPO acquisition be default-on in `setup`, or flag-gated (opt-in)?** This is the
+  central product decision the wiring work forces. Default-on adds the ~1,887-request
+  Guidelines scrape to every clean install's critical path (slower setup, rate-limit
+  exposure) but delivers the advertised "Ready" EPO features out of the box; flag-gated
+  keeps US-only installs fast but leaves the EU corpus empty after a default `setup`,
+  weakening the "zero manual steps" promise. The answer decides which command the
+  zero-manual-steps success criterion is measured against. (Phase 3 ADR / product owner.)
+- **How is the in-force Guidelines edition selected** — discovered at build time from the
+  EPO's canonical current-Guidelines entry point, or pinned per cycle with drift
+  detection? A hardcoded year (the prototype's `YEAR = "2026"`) is rejected outright; the
+  ADR must choose between the two acceptable contracts. (Phase 2 ADR.)
 - **What is the section success-ratio floor** below which the Guidelines scrape is
-  declared failed rather than written? (Answer in the Phase 2 ADR; affects when a
-  partial scrape is rejected.)
+  declared failed rather than written, and what are the concrete size/chunk floors that
+  make up the artifact-validity predicate for each source? (Phase 2/Phase 1 ADRs; these
+  define the predicate that replaces the existence short-circuits.)
 - **How robust must signed-URL extraction be** to WIPO markup variation — a single
   targeted pattern, or a more defensive parse? (Phase 1 ADR; trades fragility against
   complexity.)
@@ -406,12 +554,23 @@ author — not architecture prescriptions.
 ## Related Documents
 
 - `mcp_server/epo_downloaders.py` — the acquisition layer this PRD scopes
-  (`download_epc()`, `scrape_epo_guidelines()`, `download_all_epo_documents()`).
-- `mcp_server/mpep_search.py` — the indexer; `extract_text_from_epc()` (line 458),
-  `extract_text_from_epo_guidelines()` (line 553, the `PART/###` contract), and
-  `build_index()` EPC/Guidelines ingestion (lines 879-899).
+  (`download_epc()`, `scrape_epo_guidelines()`, `download_all_epo_documents()`). The
+  existence short-circuits to replace are at `_download_file` (line 92) and
+  `scrape_epo_guidelines` (line 185); the stale "EPO HTML version is more current"
+  docstring is on `download_epc` (around line 133).
+- `mcp_server/cli.py` — the documented build commands that must be wired:
+  `setup_command` (line 432, downloads MPEP/USC/CFR/Subsequent only),
+  `rebuild_index_command` (line 851, downloads nothing), and `download_all_command`
+  (line 889, US sources only). None currently invoke EPO acquisition.
+- `mcp_server/server.py` — the *only* current EPO trigger, behind the `--download-epo` /
+  `--download-all` flags (lines 507-519), which `setup` never passes.
+- `mcp_server/mpep_search.py` — the indexer; `extract_text_from_epc()` and
+  `extract_text_from_epo_guidelines()` (the `PART/###` contract), and `build_index()`
+  EPC/Guidelines ingestion (around line 885, which logs the EPC chunk count).
 - `scripts/_epo_guidelines_scrape.py` — committed reference prototype for the Guidelines
-  scrape; emits the indexer's expected `PART/###` format.
+  scrape; emits the indexer's expected `PART/###` format. Carries the hardcoded
+  `YEAR = "2026"` (line 15) and the `PART_TITLES["c"]` typo (line 21) that must be
+  reconciled before promotion.
 - Roadmap: `m2/s1` ("European & international law ingestion produces complete, in-force
   corpora") and project `m2/s1/epo-downloaders-fix`.
 - ADRs to be written: EPC acquisition strategy (Phase 1); EPO Guidelines acquisition
@@ -428,3 +587,4 @@ author — not architecture prescriptions.
 | Date | Author | Notes |
 |------|--------|-------|
 | 2026-06-21 | cameronrout | Initial draft |
+| 2026-06-21 | cameronrout | Adversarial-review revision: (B1) made wiring EPO acquisition into the documented build path a first-class Phase 3 deliverable and surfaced the default-on vs. flag-gated product decision; restated the zero-manual-steps criterion against a command that actually triggers acquisition. (S2) replaced the hardcoded edition year with a deterministic in-force-edition selection requirement + drift-detection fallback, and a deterministic success criterion. (S3) defined per-source artifact-validity predicates and required replacing the `dest_path.exists()` short-circuits. (M1) removed the phantom "612 EPC chunks" number. (M2) flagged the `PART_TITLES["c"]` typo, Part C wording, and stale `download_epc` docstring for cleanup before promotion. |
