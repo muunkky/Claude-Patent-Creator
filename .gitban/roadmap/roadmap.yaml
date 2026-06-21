@@ -1,0 +1,134 @@
+schema_version: 3.0.0
+document_version: 0.1.0
+last_updated: '2026-06-21'
+metadata:
+  maintained_by: Your Team
+  review_frequency: Monthly
+  related_docs:
+    - docs/README.md
+  tools:
+    roadmap_tracking: roadmap.yaml
+    task_tracking: gitban cards
+    Gitban_mcp: https://github.com/muunkky/gitban-mcp
+milestones:
+  m1:
+    id: m1
+    title: Milestone 1.0
+    description: Initial release
+    status: todo
+    start_date: '2026-06-21'
+    target_completion: '2026-01-31'
+    stories:
+      s1:
+        id: s1
+        title: 'S1: First Story'
+        description: Complete initial projects
+        status: todo
+        success_criteria:
+          - Core projects implemented
+          - Documentation complete
+        projects: {}
+  m2:
+    id: m2
+    title: Patent law corpus coverage
+    description: Ensure the patent-law RAG corpus has complete, in-force,
+      cross-jurisdiction coverage (US MPEP/USC/CFR, EPC, EPO Guidelines, PCT).
+      The package must build a high-fidelity index out of the box with no manual
+      artifact stashing, so search results are grounded in real, current
+      statutory text rather than junk placeholders or orphaned draft documents.
+    status: in_progress
+    start_date: '2026-06-21'
+    stories:
+      s1:
+        id: s1
+        title: European & international law ingestion produces complete,
+          in-force corpora
+        description: European Patent Convention (EPC) and EPO Guidelines for
+          Examination are ingested as real, in-force legal text and indexed
+          correctly by the rebuild pipeline. A fresh package build yields
+          searchable EPC and EPO Guidelines content automatically, without
+          anyone hand-placing PDFs or text files. This is the
+          European/international counterpart to the already-working US
+          (MPEP/USC/CFR) ingestion.
+        status: in_progress
+        success_criteria:
+          - epc_convention.pdf is a genuine EPC PDF (not an HTML landing page
+            saved with a .pdf extension) and yields many indexed chunks rather
+            than a single junk chunk
+          - epo_guidelines.txt is produced from the in-force EPO Guidelines
+            (current edition, HTML-only) and is the artifact the indexer
+            actually reads
+          - No orphaned draft/consultation artifacts are produced that the
+            indexer never reads
+          - A clean rebuild from scratch indexes both EPC and EPO Guidelines
+            with no manual artifact stashing
+        projects:
+          epo-downloaders-fix:
+            id: epo-downloaders-fix
+            title: epo-downloaders-fix
+            description: "Fix the two acquisition bugs in mcp_server/epo_downloaders.py
+              so the package rebuilds EPC and EPO Guidelines out of the box. Bug 1:
+              download_epc() points EPC_DOWNLOAD_URL at a WIPO Lex HTML landing page
+              (not a PDF), saving ~28KB of HTML as epc_convention.pdf which indexes
+              as a single junk chunk; the real WIPO Lex EPC PDF sits behind a signed/ephemeral
+              CloudFront URL, so the landing page must be fetched and the signed asset
+              URL extracted before download. Bug 2: scrape_epo_guidelines() downloads
+              the DRAFT consultation PDF and saves it as epo_guidelines_{year}.pdf,
+              but the indexer only reads epo_guidelines.txt — the PDF is orphaned
+              and never indexed, and the draft is not in-force law; the in-force EPO
+              Guidelines are HTML-only (2026 edition, ~1887 section pages discoverable
+              from any section page's nav) and must be scraped into epo_guidelines.txt.
+              Out of scope: the already-fixed extract_text_from_epc bug that rewrote
+              parsing for the trilingual EPO PDF. Use the project id 'epo-downloaders-fix'
+              as the sprint tag."
+            status: todo
+            docs_ref: docs/prds/PRD-001-epo-law-acquisition.md
+            features:
+              fix-epc-pdf-acquisition:
+                id: fix-epc-pdf-acquisition
+                title: Fix EPC PDF acquisition
+                description: Make download_epc() fetch a genuine EPC PDF instead
+                  of a WIPO Lex HTML landing page. Currently EPC_DOWNLOAD_URL
+                  points at the WIPO Lex landing page, so ~28KB of HTML is saved
+                  as epc_convention.pdf and indexed as one junk chunk. The real
+                  PDF is served from a signed/ephemeral CloudFront URL, so the
+                  implementation must fetch the landing page, extract the signed
+                  asset URL, then download the actual PDF. Success =
+                  epc_convention.pdf is a real EPC PDF that indexes into many
+                  chunks.
+                sequence: 1
+                status: todo
+                docs_ref: mcp_server/epo_downloaders.py
+                tdd_spec: Given download_epc() is invoked, when the WIPO Lex
+                  landing page is fetched, then the signed/ephemeral CloudFront
+                  PDF asset URL is extracted and the actual PDF is downloaded to
+                  epc_convention.pdf; and when that file is validated, then it
+                  is a genuine PDF (not HTML saved with a .pdf extension) that
+                  the indexer turns into many chunks rather than a single junk
+                  chunk.
+              fix-epo-guidelines-html-scraping:
+                id: fix-epo-guidelines-html-scraping
+                title: Fix EPO Guidelines HTML scraping → epo_guidelines.txt
+                description: Replace the orphaned DRAFT-PDF download in
+                  scrape_epo_guidelines() with a scraper that produces the
+                  in-force EPO Guidelines as epo_guidelines.txt — the artifact
+                  the indexer actually reads. Today the function downloads the
+                  draft consultation PDF and saves it as
+                  epo_guidelines_{year}.pdf, which is never indexed and is not
+                  in-force law. The in-force Guidelines (current 2026 edition)
+                  are HTML-only, with ~1887 section pages discoverable by
+                  traversing the section navigation from any section page.
+                  Scrape those pages into epo_guidelines.txt so a clean rebuild
+                  indexes the current Guidelines automatically.
+                sequence: 2
+                status: todo
+                docs_ref: mcp_server/epo_downloaders.py
+                tdd_spec: Given scrape_epo_guidelines() is invoked, when it
+                  traverses the in-force EPO Guidelines (current edition,
+                  HTML-only) section navigation starting from any section page,
+                  then it discovers the full set of section pages (~1887) and
+                  writes their text to epo_guidelines.txt; and when the indexer
+                  runs, then it reads epo_guidelines.txt (not an orphaned
+                  epo_guidelines_{year}.pdf) and indexes the in-force
+                  Guidelines, with no draft/consultation artifact left behind.
+        docs_ref: docs/prds/PRD-001-epo-law-acquisition.md

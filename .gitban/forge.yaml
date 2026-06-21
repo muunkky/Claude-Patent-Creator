@@ -1,0 +1,69 @@
+# gitban forge topology — .gitban/forge.yaml
+#
+# Declarative collaboration topology for a fork-based gitban workflow.
+# This file is THREE things at once:
+#   1. the adopter-facing commented example you are reading now,
+#   2. the seed `gitban init --contributing` copies to `.gitban/forge.yaml`
+#      (skip-if-exists — gitban never overwrites your forge.yaml), and
+#   3. the render fixture the scaffold self-containment check renders the
+#      generated CONTRIBUTING-gitban.md against, so the doc template can never
+#      drift from the document an adopter actually starts from.
+#
+# Edit the COPY at `.gitban/forge.yaml`, not this packaged example. On
+# `gitban sync` / `gitban init --contributing`, gitban re-renders the
+# human-readable `CONTRIBUTING-gitban.md` at your repo root from this topology.
+
+version: "1"
+
+# Forge provider. Constrained to the built adapters; an unbuilt provider is
+# rejected at load rather than silently accepted.
+provider: github
+
+# Git remote name -> { repo slug, side }. `side` is the security-critical input
+# to the publish gate: `fork` is a repo gitban may push to; `upstream` is the
+# canonical project gitban must never auto-write to.
+remotes:
+  origin:
+    repo: "RobThePCGuy/Claude-Patent-Creator"
+    side: upstream
+  fork:
+    repo: "muunkky/Claude-Patent-Creator"
+    side: fork
+
+# Files the fork tracks on purpose (`tracked`) vs. regenerable runtime paths
+# `gitban init --contributing` adds to `.gitignore` (`ignored`).
+overlay:
+  tracked:
+    - ".gitban/"
+    - ".claude/"
+  ignored:
+    - ".gitban/worktrees/"
+    - ".gitban/logs/"
+    - ".gitban/traces/"
+    - ".gitban/audit/"
+    - ".gitban/views/"
+
+# Branch-model name -> branch-pattern string. Declared-and-rendered here;
+# behavioural consumers land in later phases.
+branches:
+  monolith: "sprint/{tag}"
+  process_diff: "sprint-record/{tag}"
+  contribution: "contrib/{slug}"
+
+# Declared issue / pull-request / discussion conventions, rendered into the
+# contribution doc so a fork contributor knows the house rules.
+conventions:
+  issue:
+    sprint_tracking: true
+    unblock_prefix: "[unblock]"
+  pull_request:
+    draft_first: true
+    offer_dont_push: true
+  discussion:
+    narrative_thread: true
+
+# OPTIONAL publish-gate overrides. Omit the whole block to inherit gitban's
+# built-in gate verbatim. Overrides may only TIGHTEN the gate (never loosen it);
+# a loosening override is rejected at load.
+gate:
+  overrides: []
