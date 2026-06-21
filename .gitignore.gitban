@@ -1,0 +1,40 @@
+# gitban-provided sample — merge the WHOLE gitban-managed section below into your
+# .gitignore (do not cherry-pick lines: the negation chain is interdependent).
+# Refreshed on every gitban update.
+#
+# Non-gitban repo (you do NOT track your .gitban/ PM surface)? Ignore the whole tree
+# with a single line instead of the allowlist below:
+#   .gitban/**
+# === gitban-managed: version-control allowlist ===
+# Ignore all gitban working state by default; track only the
+# project-management surface (roadmap, cards) and the dispatch state
+# the harness reads to resume idempotently (agent inboxes). Everything
+# else — telemetry, machine-local identity, regenerable artifacts — is
+# ignored so new artifact classes are private by default.
+.gitban/**
+!.gitban/roadmap/
+!.gitban/roadmap/**
+!.gitban/cards/
+!.gitban/cards/**
+# Agent inboxes carry dispatch state (the dispatch-log + the -ERROR.md
+# status files a crashed agent writes back) plus review provenance, and
+# must survive a fresh clone so a resuming dispatcher does not re-run
+# completed work. Re-including them requires un-ignoring each parent dir
+# first; the negations stop before traces/ and logs/, which stay ignored.
+!.gitban/agents/
+!.gitban/agents/*/
+!.gitban/agents/*/inbox/
+!.gitban/agents/*/inbox/**
+# Harness hooks are tracked: they are load-bearing PreToolUse guards that
+# every checkout needs to operate the dispatch harness, and — unlike
+# templates — they are NOT lazily regenerated. Git worktrees and fresh
+# clones receive only tracked files, and the MCP deploys hooks to the main
+# workspace only, never into a worktree; untracking them breaks worktree
+# dispatch and deletes them from a teammate's disk on pull. So they stay
+# tracked. (lib/ is under hooks/ and is covered by the recursive negation.)
+!.gitban/hooks/
+!.gitban/hooks/**
+# Legacy throwaway card artifacts: the cards/** negation above would
+# otherwise re-include these scratch copies. Keep them ignored.
+.gitban/cards/**/*_temp_*
+.gitban/cards/**/*_backup_*

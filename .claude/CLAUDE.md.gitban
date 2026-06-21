@@ -1,0 +1,61 @@
+<!-- gitban-provided sample. Review and merge the relevant parts into your project's CLAUDE.md. Refreshed on every `gitban update`. -->
+<!--
+  This file is gitban's shipped sample CLAUDE.md, deployed to
+  `.claude/CLAUDE.md.gitban`. To adopt it, review the contents below and
+  merge the relevant parts into your project's `CLAUDE.md`.
+
+  Add your project-specific instructions above and below the
+  `Project Conventions` block. Your `CLAUDE.md` is never overwritten by
+  `gitban update` — only `.claude/CLAUDE.md.gitban` is refreshed. Diff
+  the two to pull in upstream changes.
+
+  The `Project Conventions` block below is rendered from
+  `gitban/claude_scaffold/shared/conventions.md.j2` — the same fragment
+  that lands in executor/reviewer SKILL.md files at deploy time.
+-->
+
+# Working with gitban
+
+New here? Read **`.gitban/README.md`** first — the fastest path to seeing the
+board and doing work. For the full workflow (how PRDs, ADRs, and design docs
+become sprints and get executed), see **`.gitban/docs/development-lifecycle.md`**.
+
+# Project-specific instructions
+
+<!--
+  Add your project's own instructions here. Examples of what fits well in
+  this section:
+    - Which test runner / venv resolver to use
+    - Local commit-style rules (e.g. no co-author tags, no emoji)
+    - Build / deploy commands and their preconditions
+    - Pointers to the most important ADRs or design docs
+-->
+
+### Project Conventions
+
+**Testing tools:**
+- Use `pytest` as the test runner for all Python tests.
+- Use Playwright for browser-facing end-to-end tests. Install via `pip install playwright` and `playwright install chromium`.
+- Use `bash scripts/venv-python` to invoke Python in all environments (main repo and worktrees).
+
+**Quality gates:**
+- All browser-facing changes require at least one Playwright e2e test covering the critical user path.
+- All code changes must pass pre-commit hooks: ruff format, ruff lint, mypy, mcp-sync-check, mixed-line-ending.
+- Test-driven development is mandatory: write the failing test before the implementation.
+
+**Project-specific rules:**
+- Template-structure enforcement is unconditional. Any `.gitban/template_config.json` in your workspace is ignored (its contents no longer affect enforcement) and can be safely deleted.
+- Never run `pip install` in a worktree — the shared venv is read-only.
+- No co-authored-by lines in commits. No AI attribution.
+- Executor / reviewer / planner / router agents may use `--no-verify` (e.g. `git -C "$PARENT" commit --no-verify`) for intermediate commits. The PR agent and sprint-closeout-reviewer must run hooks before merge.
+- Cards may reference the roadmap, and the roadmap may optionally reference sprints and cards via its `sprints_ref` and `cards_ref` metadata fields on any node (open strings modeled on `docs_ref`, no format validation, stale refs allowed).
+- **Never directly edit gitban-managed state.** The following paths are hard-protected — no direct `Write`, `Edit`, `sed`, `cat >>`, `cd`-prefixed `mv`, or any other non-MCP mutation: `.gitban/cards/` (including `archive/`), `.gitban/roadmap/` (the whole directory, including `roadmap.yaml` and the schema), and `.gitban/audit/`. All mutations go through gitban MCP tools (`create_card`, `edit_card`, `move_to_todo`, `upsert_roadmap`, etc.). The scaffold ships a `validate-no-direct-gitban-state-edit.sh` PreToolUse hook that blocks direct writes and normalises `cd`-prefixed Bash commands before matching. If you have a legitimate reason to hand-edit (triage, merge-conflict resolution), set `GITBAN_ALLOW_DIRECT_EDIT=1` in your shell; the edit is allowed but audited. Soft-protected paths (`.gitban/templates/`, `.gitban/handle.json`, `.gitban/validation_config.json`, `*.example.{json,yaml}`, `.gitban/examples/`) emit an advisory but do not block. Agent inboxes (`.gitban/agents/*/inbox/`) are intentionally unprotected — they are the prescribed file-based agent-to-agent comm channel where scaffold SKILLs (dispatcher, executor, reviewer, router, planner) write directives directly; no MCP write tool exists for them.
+
+
+# Notes
+
+<!--
+  Free-form notes the team wants every Claude session to see. Pin
+  in-flight constraints, current sprint focus, or known-bad workarounds
+  here. Keep this section short — long content belongs in docs/.
+-->

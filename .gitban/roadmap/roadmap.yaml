@@ -98,7 +98,7 @@ milestones:
                   chunks.
                 sequence: 1
                 status: todo
-                docs_ref: mcp_server/epo_downloaders.py
+                docs_ref: docs/designs/epo-law-acquisition.md
                 tdd_spec: Given download_epc() is invoked, when the WIPO Lex
                   landing page is fetched, then the signed/ephemeral CloudFront
                   PDF asset URL is extracted and the actual PDF is downloaded to
@@ -122,7 +122,7 @@ milestones:
                   indexes the current Guidelines automatically.
                 sequence: 2
                 status: todo
-                docs_ref: mcp_server/epo_downloaders.py
+                docs_ref: docs/designs/epo-law-acquisition.md
                 tdd_spec: Given scrape_epo_guidelines() is invoked, when it
                   traverses the in-force EPO Guidelines (current edition,
                   HTML-only) section navigation starting from any section page,

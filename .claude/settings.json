@@ -1,0 +1,75 @@
+{
+  "autoMemoryEnabled": false,
+  "permissions": {
+    "allow": [
+      "Edit(.claude/skills/**/*.md)",
+      "Write(.claude/skills/**/*.md)",
+      "Edit(.claude/agents/*.md)",
+      "Write(.claude/agents/*.md)"
+    ],
+    "deny": [],
+    "ask": []
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|Bash|PowerShell|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'B=\"if [ ! -f \\\"\\$H\\\" ]; then echo \\\"BLOCKED: validate-no-direct-gitban-state-edit.sh not found at \\$H -- protection is DOWN, refusing command (ADR-045)\\\" >&2; exit 2; fi; exec bash \\\"\\$H\\\"\"; H=\"$CLAUDE_PROJECT_DIR/.gitban/hooks/validate-no-direct-gitban-state-edit.sh\"; if grep -qi microsoft /proc/version 2>/dev/null; then GBX=\"\"; GW=\"$(where.exe git 2>/dev/null | head -n1 | tr -d \"\\r\")\"; if [ -n \"$GW\" ]; then GWP=\"$(wslpath \"$GW\" 2>/dev/null)\"; if [ -n \"$GWP\" ]; then GBX=\"$(dirname \"$(dirname \"$GWP\")\")/bin/bash.exe\"; fi; fi; for GB in \"/mnt/c/Program Files/Git/bin/bash.exe\" \"/mnt/c/Program Files/Git/usr/bin/bash.exe\" \"/mnt/c/Program Files (x86)/Git/bin/bash.exe\" \"/mnt/c/Program Files (x86)/Git/usr/bin/bash.exe\" \"$GBX\"; do if [ -n \"$GB\" ] && [ -x \"$GB\" ]; then export H; exec \"$GB\" -c \"$B\"; fi; done; echo \"BLOCKED: validate-no-direct-gitban-state-edit.sh is running under WSL bash and no Git Bash was found -- protection cannot run safely under WSL (ADR-045); install Git for Windows or point the hook interpreter at Git Bash\" >&2; exit 2; fi; eval \"$B\"'"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|Bash|PowerShell|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'B=\"if [ ! -f \\\"\\$H\\\" ]; then echo \\\"BLOCKED: cwd-pin-check.sh not found at \\$H -- protection is DOWN, refusing command (ADR-051)\\\" >&2; exit 2; fi; exec bash \\\"\\$H\\\"\"; H=\"$CLAUDE_PROJECT_DIR/.gitban/hooks/cwd-pin-check.sh\"; if grep -qi microsoft /proc/version 2>/dev/null; then GBX=\"\"; GW=\"$(where.exe git 2>/dev/null | head -n1 | tr -d \"\\r\")\"; if [ -n \"$GW\" ]; then GWP=\"$(wslpath \"$GW\" 2>/dev/null)\"; if [ -n \"$GWP\" ]; then GBX=\"$(dirname \"$(dirname \"$GWP\")\")/bin/bash.exe\"; fi; fi; for GB in \"/mnt/c/Program Files/Git/bin/bash.exe\" \"/mnt/c/Program Files/Git/usr/bin/bash.exe\" \"/mnt/c/Program Files (x86)/Git/bin/bash.exe\" \"/mnt/c/Program Files (x86)/Git/usr/bin/bash.exe\" \"$GBX\"; do if [ -n \"$GB\" ] && [ -x \"$GB\" ]; then export H; exec \"$GB\" -c \"$B\"; fi; done; echo \"BLOCKED: cwd-pin-check.sh is running under WSL bash and no Git Bash was found -- protection cannot run safely under WSL (ADR-051); install Git for Windows or point the hook interpreter at Git Bash\" >&2; exit 2; fi; eval \"$B\"'"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.gitban/hooks/forge-action-guard.sh\""
+          }
+        ]
+      },
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.gitban/hooks/agent-trace.sh\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.gitban/hooks/post-bash-log.sh\""
+          }
+        ]
+      }
+    ],
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.gitban/hooks/worktree-create.sh\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

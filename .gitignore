@@ -66,3 +66,11 @@ ruff_out*.txt
 
 # Codebase reckoning workspace
 .codebase-reckoning/
+
+# === gitban forge overlay (init --contributing) ===
+.gitban/worktrees/
+.gitban/logs/
+.gitban/traces/
+.gitban/audit/
+.gitban/views/
+# === end gitban forge overlay ===

@@ -24,11 +24,11 @@ provider: github
 # canonical project gitban must never auto-write to.
 remotes:
   origin:
-    repo: "RobThePCGuy/Claude-Patent-Creator"
-    side: upstream
-  fork:
     repo: "muunkky/Claude-Patent-Creator"
     side: fork
+  upstream:
+    repo: "RobThePCGuy/Claude-Patent-Creator"
+    side: upstream
 
 # Files the fork tracks on purpose (`tracked`) vs. regenerable runtime paths
 # `gitban init --contributing` adds to `.gitignore` (`ignored`).
