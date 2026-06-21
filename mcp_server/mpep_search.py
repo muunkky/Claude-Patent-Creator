@@ -456,87 +456,92 @@ class MPEPIndex:
     # ==========================================================================
 
     def extract_text_from_epc(self, pdf_path: Path) -> list[dict[str, Any]]:
-        """Extract text from European Patent Convention PDF.
+        """Extract clean English-only EPC Articles + Implementing Regulation Rules.
 
-        The EPC 17th edition PDF contains both the Convention articles and the
-        Implementing Regulations. This method splits them by detecting the
-        section boundary and produces chunks with source="EPC" for articles
-        and source="EPC_RULES" for rules.
+        The authoritative EPC is the EPO's official trilingual (DE | EN | FR)
+        publication: a two-column bilingual layout (German left column, English
+        right column) with French text and cross-reference concordance tables on
+        their own pages. We keep ONLY the English column (block x0 >= MIDX) on
+        pages whose running header marks them as the Convention ("European Patent
+        Convention") or the "Implementing Regulations", skip everything else
+        (concordance, fees, protocols, index), and split into provisions on
+        "Article N" / "Rule N" headers. Produces source="EPC" for articles and
+        source="EPC_RULES" for rules.
         """
         import re
 
-        epc_chunks = []
-        rules_chunks = []
+        MIDX = 235.0  # page width ~468; English column begins ~241
+        ART_MAX, RULE_MAX = 178, 165  # valid EPC article / rule number ranges
+
+        def _clean_num(digits: str, max_n: int) -> str:
+            # Footnote superscripts merge into the number (e.g. "Rule 4161" =
+            # Rule 41 + footnote 61). Trim trailing digits until in range.
+            d = digits
+            while len(d) > 1 and int(d) > max_n:
+                d = d[:-1]
+            return d
+
+        provisions: list[dict[str, Any]] = []
+        current: dict[str, Any] | None = None
         doc = None
         try:
             doc = fitz.open(pdf_path)  # type: ignore[union-attr]
-            current_article = "EPC"
-            in_rules_section = False
-
             for page_num, page in enumerate(doc):  # type: ignore[arg-type]
-                text = page.get_text()
-                if not text.strip():
-                    continue
-
-                # Detect transition to Implementing Regulations
-                if re.search(r"IMPLEMENTING\s+REGULATIONS", text, re.IGNORECASE):
-                    in_rules_section = True
-
-                if in_rules_section:
-                    # Detect rule numbers: "Rule 1", "Rule 42", etc.
-                    rule_matches = list(re.finditer(r"Rule\s+(\d+)\s*\n\s*([^\n]{1,100})", text))
-                    current_label = current_article
-
-                    if rule_matches:
-                        for match in rule_matches:
-                            rule_num = match.group(1)
-                            rule_title = match.group(2).strip()
-                            current_label = f"Rule {rule_num} EPC - {rule_title}"
-
-                    page_chunks = self._chunk_text_with_metadata(
-                        text=text,
-                        section_label=current_label,
-                        base_metadata={
-                            "source": "EPC_RULES",
-                            "file": pdf_path.name,
-                            "section": current_label,
-                            "page": page_num + 1,
-                            "is_statute": False,
-                            "is_regulation": True,
-                            "is_update": False,
-                        },
-                    )
-                    rules_chunks.extend(page_chunks)
+                blocks = page.get_text("blocks")
+                header = " ".join(b[4] for b in blocks if b[1] < 32)
+                if "Implementing Regulations" in header:
+                    section, hdr_re, max_n = "EPC_RULES", re.compile(r"^Rule\s+(\d+)\b"), RULE_MAX
+                elif "European Patent Convention" in header:
+                    section, hdr_re, max_n = "EPC", re.compile(r"^Article\s+(\d+)\b"), ART_MAX
                 else:
-                    # Detect article numbers: "Article 52", "Article 84", etc.
-                    art_matches = list(re.finditer(r"Article\s+(\d+)\s*\n\s*([^\n]{1,100})", text))
+                    continue  # French / concordance / fees / protocols / index
 
-                    if art_matches:
-                        for match in art_matches:
-                            art_num = match.group(1)
-                            art_title = match.group(2).strip()
-                            current_article = f"Art. {art_num} EPC - {art_title}"
-
-                    page_chunks = self._chunk_text_with_metadata(
-                        text=text,
-                        section_label=current_article,
-                        base_metadata={
-                            "source": "EPC",
-                            "file": pdf_path.name,
-                            "section": current_article,
-                            "page": page_num + 1,
-                            "is_statute": True,
-                            "is_regulation": False,
-                            "is_update": False,
-                        },
-                    )
-                    epc_chunks.extend(page_chunks)
-
+                english = sorted(
+                    (b for b in blocks if b[0] >= MIDX and b[1] >= 32 and b[4].strip()),
+                    key=lambda b: b[1],
+                )
+                for b in english:
+                    text = re.sub(r"\s{2,}", " ", re.sub(r"[ \t]*\n[ \t]*", " ", b[4])).strip()
+                    if not text or text.isdigit():
+                        continue
+                    m = hdr_re.match(text)
+                    if m:
+                        if current and len(current["text"].strip()) > 40:
+                            provisions.append(current)
+                        num = _clean_num(m.group(1), max_n)
+                        kind = "Rule" if section == "EPC_RULES" else "Art."
+                        # Strip leading footnote digits/punctuation from the title
+                        title = re.sub(r"^[\d.,;:\s]+", "", text[m.end():]).strip()[:80]
+                        label = f"{kind} {num} EPC - {title}".rstrip(" -")
+                        current = {"section": section, "label": label, "page": page_num + 1, "text": text + " "}
+                    elif current is not None:
+                        current["text"] += text + " "
+            if current and len(current["text"].strip()) > 40:
+                provisions.append(current)
         except Exception as e:
             _log_error(f"Error processing EPC {pdf_path}: {e}", exc_info=True, file_path=str(pdf_path))
         finally:
             if doc is not None:
                 doc.close()
+
+        epc_chunks: list[dict[str, Any]] = []
+        rules_chunks: list[dict[str, Any]] = []
+        for prov in provisions:
+            is_rule = prov["section"] == "EPC_RULES"
+            page_chunks = self._chunk_text_with_metadata(
+                text=prov["text"],
+                section_label=prov["label"],
+                base_metadata={
+                    "source": prov["section"],
+                    "file": pdf_path.name,
+                    "section": prov["label"],
+                    "page": prov["page"],
+                    "is_statute": not is_rule,
+                    "is_regulation": is_rule,
+                    "is_update": False,
+                },
+            )
+            (rules_chunks if is_rule else epc_chunks).extend(page_chunks)
 
         _log_info(
             f"Extracted {len(epc_chunks)} EPC article chunks and {len(rules_chunks)} EPC rules chunks",
@@ -958,9 +963,9 @@ class MPEPIndex:
         for c in all_chunks:
             meta = {
                 "source": c.get("source", "MPEP"),
-                "file": c["file"],
-                "page": c["page"],
-                "section": c["section"],
+                "file": c.get("file", ""),
+                "page": c.get("page", 0),  # HTML sources (EPO Guidelines) have no page
+                "section": c.get("section", ""),
                 "has_statute": c.get("has_statute", False),
                 "has_mpep_ref": c.get("has_mpep_ref", False),
                 "has_rule_ref": c.get("has_rule_ref", False),
