@@ -1,6 +1,7 @@
-# NOM-001: EPO/EPC Law Acquisition Architecture — Validate-Then-Persist, Discover-In-Force, Deferred-Default Acquisition
+# ADR-001: EPO/EPC Law Acquisition Architecture — Validate-Then-Persist, Discover-In-Force, Deferred-Default Acquisition
 
-> **Status**: Proposed | **Date**: 2026-06-21 | **Deciders**: TBD
+> **Status**: Accepted | **Date**: 2026-06-21 | **Deciders**: CAMERON
+> **Promoted** from NOM-001 after one adversarial review round (B1–B4 + S1–S3 resolved with live-source verification).
 
 ## Context
 
