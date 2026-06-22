@@ -6,6 +6,7 @@ Detects GPU type and determines correct PyTorch version
 
 import contextlib
 import platform
+import re
 import subprocess
 
 
@@ -45,7 +46,7 @@ def get_nvidia_compute_capability():
                         caps.append(float(cleaned))
             if caps:
                 return min(caps)
-    except (subprocess.TimeoutExpired, FileNotFoundError):
+    except (subprocess.TimeoutExpired, OSError):
         pass
     return None
 
@@ -140,17 +141,32 @@ def check_pytorch_installation():
             try:
                 arch_list = torch.cuda.get_arch_list()
                 if arch_list:
+                    # Parse the build's compiled architectures into (major, minor)
+                    # pairs. PyTorch wheels list baselines (e.g. sm_80, sm_86) and
+                    # rely on intra-major backward compatibility, so an exact
+                    # sm_XX string match would false-positive on minor versions
+                    # not explicitly listed (e.g. sm_89 / RTX 40-series).
+                    supported = []
+                    for arch in arch_list:
+                        m = re.match(r"^(?:sm|compute)_(\d+)(\d)[a-z]?$", arch)
+                        if m:
+                            supported.append((int(m.group(1)), int(m.group(2))))
                     # Check every CUDA device: device 0 may be supported while a
-                    # second, older GPU in the system is not.
+                    # second, older GPU in the system is not. A device is
+                    # compatible when the build has a kernel with the same major
+                    # version and a minor <= the device's minor (NVIDIA guarantees
+                    # backward compatibility within a major architecture).
                     for i in range(torch.cuda.device_count()):
                         major, minor = torch.cuda.get_device_capability(i)
-                        cap_tag = f"sm_{major}{minor}"
-                        if cap_tag not in arch_list:
+                        compatible = any(
+                            a_major == major and a_minor <= minor for a_major, a_minor in supported
+                        )
+                        if not compatible:
                             status["hardware_match"] = False
                             status["warning"] = (
                                 f"PyTorch {torch.__version__} has no compiled kernels "
                                 f"for GPU {i} ({torch.cuda.get_device_name(i)}, "
-                                f"{cap_tag}); build supports {arch_list}"
+                                f"sm_{major}{minor}); build supports {arch_list}"
                             )
                             break
             except Exception:
