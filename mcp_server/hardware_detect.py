@@ -151,24 +151,29 @@ def check_pytorch_installation():
                         m = re.match(r"^(?:sm|compute)_(\d+)(\d)[a-z]?$", arch)
                         if m:
                             supported.append((int(m.group(1)), int(m.group(2))))
+                    # Only evaluate compatibility if at least one architecture
+                    # parsed; an empty list (unexpected arch_list format) must
+                    # not produce a false mismatch and trigger a reinstall loop.
                     # Check every CUDA device: device 0 may be supported while a
                     # second, older GPU in the system is not. A device is
                     # compatible when the build has a kernel with the same major
                     # version and a minor <= the device's minor (NVIDIA guarantees
                     # backward compatibility within a major architecture).
-                    for i in range(torch.cuda.device_count()):
-                        major, minor = torch.cuda.get_device_capability(i)
-                        compatible = any(
-                            a_major == major and a_minor <= minor for a_major, a_minor in supported
-                        )
-                        if not compatible:
-                            status["hardware_match"] = False
-                            status["warning"] = (
-                                f"PyTorch {torch.__version__} has no compiled kernels "
-                                f"for GPU {i} ({torch.cuda.get_device_name(i)}, "
-                                f"sm_{major}{minor}); build supports {arch_list}"
+                    if supported:
+                        for i in range(torch.cuda.device_count()):
+                            major, minor = torch.cuda.get_device_capability(i)
+                            compatible = any(
+                                a_major == major and a_minor <= minor
+                                for a_major, a_minor in supported
                             )
-                            break
+                            if not compatible:
+                                status["hardware_match"] = False
+                                status["warning"] = (
+                                    f"PyTorch {torch.__version__} has no compiled kernels "
+                                    f"for GPU {i} ({torch.cuda.get_device_name(i)}, "
+                                    f"sm_{major}{minor}); build supports {arch_list}"
+                                )
+                                break
             except Exception:
                 pass
 

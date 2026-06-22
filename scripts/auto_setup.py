@@ -90,14 +90,15 @@ def install_pytorch(gpu_available=False, compute_cap=None):
         print(f"NVIDIA GPU detected - Installing CUDA {cuda_name} version")
         print("=" * 60)
 
-    # Uninstall any existing PyTorch first
+    # Uninstall any existing PyTorch first. Quote sys.executable so a venv path
+    # containing spaces (e.g. C:\Users\John Doe\venv) survives shell=True.
     subprocess.run(
-        f"{sys.executable} -m pip uninstall -y torch torchvision torchaudio",
+        f'"{sys.executable}" -m pip uninstall -y torch torchvision torchaudio',
         shell=True,
         capture_output=True,
     )
 
-    cmd = f"{sys.executable} -m pip install {torch_spec} --index-url https://download.pytorch.org/whl/{cuda_pkg}"
+    cmd = f'"{sys.executable}" -m pip install {torch_spec} --index-url https://download.pytorch.org/whl/{cuda_pkg}'
     return run_command(cmd, f"Installing PyTorch (CUDA {cuda_name})")
 
 
