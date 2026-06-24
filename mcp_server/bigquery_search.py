@@ -290,15 +290,8 @@ class BigQueryPatentSearch:
         OFFSET @offset
         """
 
-        job_config = self._make_job_config(parameters)
-
         try:
-            # Execute query with timing and timeout (30 seconds)
-            if LOGGING_AVAILABLE and OperationTimer:
-                with OperationTimer("bigquery_query"):
-                    results = self.client.query(sql, job_config=job_config).result(timeout=30)
-            else:
-                results = self.client.query(sql, job_config=job_config).result(timeout=30)
+            results = self._run_query(sql, parameters)
 
             # Process results
             patents = []
@@ -385,17 +378,11 @@ class BigQueryPatentSearch:
         LIMIT 1
         """
 
-        job_config = self._make_job_config(
-            [bigquery.ScalarQueryParameter("patent_number", "STRING", patent_number)]  # type: ignore[union-attr]
-        )
-
         try:
-            # Execute query with timing and timeout (30 seconds)
-            if LOGGING_AVAILABLE and OperationTimer:
-                with OperationTimer("bigquery_query"):
-                    results = self.client.query(sql, job_config=job_config).result(timeout=30)
-            else:
-                results = self.client.query(sql, job_config=job_config).result(timeout=30)
+            results = self._run_query(
+                sql,
+                [bigquery.ScalarQueryParameter("patent_number", "STRING", patent_number)],  # type: ignore[union-attr]
+            )
 
             # Process results
             for row in results:
@@ -505,21 +492,15 @@ class BigQueryPatentSearch:
         LIMIT @limit
         """
 
-        job_config = self._make_job_config(
-            [
-                bigquery.ScalarQueryParameter("cpc_code", "STRING", cpc_code),  # type: ignore[union-attr]
-                bigquery.ScalarQueryParameter("country", "STRING", country),  # type: ignore[union-attr]
-                bigquery.ScalarQueryParameter("limit", "INT64", limit),  # type: ignore[union-attr]
-            ]
-        )
-
         try:
-            # Execute query with timing and timeout (30 seconds)
-            if LOGGING_AVAILABLE and OperationTimer:
-                with OperationTimer("bigquery_query"):
-                    results = self.client.query(sql, job_config=job_config).result(timeout=30)
-            else:
-                results = self.client.query(sql, job_config=job_config).result(timeout=30)
+            results = self._run_query(
+                sql,
+                [
+                    bigquery.ScalarQueryParameter("cpc_code", "STRING", cpc_code),  # type: ignore[union-attr]
+                    bigquery.ScalarQueryParameter("country", "STRING", country),  # type: ignore[union-attr]
+                    bigquery.ScalarQueryParameter("limit", "INT64", limit),  # type: ignore[union-attr]
+                ],
+            )
 
             # Process results
             patents = []
@@ -608,20 +589,15 @@ class BigQueryPatentSearch:
         LIMIT @limit
         """
 
-        job_config = self._make_job_config(
-            [
-                bigquery.ScalarQueryParameter("ipc_code", "STRING", ipc_code),  # type: ignore[union-attr]
-                bigquery.ScalarQueryParameter("country", "STRING", country),  # type: ignore[union-attr]
-                bigquery.ScalarQueryParameter("limit", "INT64", limit),  # type: ignore[union-attr]
-            ]
-        )
-
         try:
-            if LOGGING_AVAILABLE and OperationTimer:
-                with OperationTimer("bigquery_query"):
-                    results = self.client.query(sql, job_config=job_config).result(timeout=30)
-            else:
-                results = self.client.query(sql, job_config=job_config).result(timeout=30)
+            results = self._run_query(
+                sql,
+                [
+                    bigquery.ScalarQueryParameter("ipc_code", "STRING", ipc_code),  # type: ignore[union-attr]
+                    bigquery.ScalarQueryParameter("country", "STRING", country),  # type: ignore[union-attr]
+                    bigquery.ScalarQueryParameter("limit", "INT64", limit),  # type: ignore[union-attr]
+                ],
+            )
 
             patents = []
             for row in results:
@@ -706,19 +682,14 @@ class BigQueryPatentSearch:
         LIMIT @limit
         """
 
-        job_config = self._make_job_config(
-            [
-                bigquery.ScalarQueryParameter("family_id", "INT64", family_id),  # type: ignore[union-attr]
-                bigquery.ScalarQueryParameter("limit", "INT64", limit),  # type: ignore[union-attr]
-            ]
-        )
-
         try:
-            if LOGGING_AVAILABLE and OperationTimer:
-                with OperationTimer("bigquery_query"):
-                    results = self.client.query(sql, job_config=job_config).result(timeout=30)
-            else:
-                results = self.client.query(sql, job_config=job_config).result(timeout=30)
+            results = self._run_query(
+                sql,
+                [
+                    bigquery.ScalarQueryParameter("family_id", "INT64", family_id),  # type: ignore[union-attr]
+                    bigquery.ScalarQueryParameter("limit", "INT64", limit),  # type: ignore[union-attr]
+                ],
+            )
 
             patents = []
             for row in results:
@@ -758,8 +729,8 @@ class BigQueryPatentSearch:
 
             raise
 
-    def _make_job_config(self, parameters: list) -> Any:
-        """Build a QueryJobConfig with parameters and the bytes-billed ceiling."""
+    def _resolve_max_bytes_billed(self) -> int:
+        """Resolve the per-query bytes-billed ceiling (env override or default)."""
         max_bytes = self.DEFAULT_MAX_BYTES_BILLED
         env_value = os.environ.get("PATENT_BIGQUERY_MAX_BYTES_BILLED")
         if env_value:
@@ -774,9 +745,61 @@ class BigQueryPatentSearch:
                     "patent_bigquery_max_bytes_billed_invalid",
                     extra={"value": env_value, "fallback_bytes": max_bytes},
                 )
+        return max_bytes
+
+    def _make_job_config(self, parameters: list) -> Any:
+        """Build a QueryJobConfig with parameters and the bytes-billed ceiling."""
         return bigquery.QueryJobConfig(  # type: ignore[union-attr]
             query_parameters=parameters,
-            maximum_bytes_billed=max_bytes,
+            maximum_bytes_billed=self._resolve_max_bytes_billed(),
+        )
+
+    def _assert_within_budget(self, sql: str, parameters: list) -> None:
+        """Estimate the query's scan size with a free dry run and fail loudly if it
+        would exceed the bytes-billed ceiling.
+
+        Without this guard an over-budget query is either rejected mid-flight by
+        BigQuery with an opaque ``bytesBilledLimitExceeded`` 500 or appears to hang,
+        giving the caller no actionable signal. A dry run is free and near-instant, so
+        we surface a clear, actionable error *before* spending any query budget.
+        """
+        if not self.client or bigquery is None:
+            return
+        max_bytes = self._resolve_max_bytes_billed()
+        try:
+            dry_config = bigquery.QueryJobConfig(  # type: ignore[union-attr]
+                query_parameters=parameters, dry_run=True, use_query_cache=False
+            )
+            estimate = self.client.query(sql, job_config=dry_config).total_bytes_processed
+        except Exception:
+            # A failed estimate must never block the search; let the real query run
+            # and surface any genuine error itself.
+            return
+        if estimate is None or estimate <= max_bytes:
+            return
+        est_gib = estimate / 1024**3
+        cap_gib = max_bytes / 1024**3
+        suggested = int(estimate * 1.2)
+        est_usd = estimate / 1024**4 * 6.25  # on-demand BigQuery: ~$6.25 per TiB scanned
+        raise ValueError(
+            f"Patent search would scan ~{est_gib:.0f} GiB, exceeding the per-query cost "
+            f"cap of {cap_gib:.0f} GiB. Narrow the search (add country / start_year / "
+            f"end_year filters or more specific keywords), or raise the cap by setting "
+            f"PATENT_BIGQUERY_MAX_BYTES_BILLED={suggested} "
+            f"(~{est_gib * 1.2:.0f} GiB, ~${est_usd:.2f} per query at on-demand pricing)."
+        )
+
+    def _run_query(self, sql: str, parameters: list) -> Any:
+        """Pre-flight the cost, then execute the query and return the row iterator."""
+        self._assert_within_budget(sql, parameters)
+        job_config = self._make_job_config(parameters)
+        if LOGGING_AVAILABLE and OperationTimer:
+            with OperationTimer("bigquery_query"):
+                return self.client.query(sql, job_config=job_config).result(
+                    timeout=self.QUERY_TIMEOUT_SECONDS
+                )
+        return self.client.query(sql, job_config=job_config).result(
+            timeout=self.QUERY_TIMEOUT_SECONDS
         )
 
     def _format_date(self, date_int: Optional[int]) -> Optional[str]:
