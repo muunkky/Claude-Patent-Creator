@@ -188,6 +188,34 @@ Your driver (581.80) supports:
 | CUDA 12.8 | `https://download.pytorch.org/whl/cu128` | ≥R555 | ✓ **Installed** |
 | CUDA 13.0 | `https://download.pytorch.org/whl/cu130` | ≥R560 | ✓ Supported |
 
+### GPU architecture and wheel selection
+
+The CUDA wheel is chosen automatically from your GPU's **compute capability**
+(detected via `nvidia-smi`), because the `cu128` wheels only ship compiled
+kernels for **Turing (sm_75) and newer**:
+
+| GPU architecture | Example cards | Compute capability | PyTorch wheel |
+|------------------|---------------|--------------------|---------------|
+| Blackwell / Ada / Ampere / Turing | RTX 50/40/30 series, RTX 20 series | ≥ 7.5 | `cu128` |
+| Pascal / Volta / Maxwell | GTX 10 series, Titan X, Tesla V100 | < 7.5 | `cu126` (torch 2.7.1) |
+
+Pre-Turing cards routed to `cu128` crash at kernel launch with
+`CUDA error: no kernel image is available for execution on the device`. The
+`cu126` build of torch 2.7.1 ships kernels down to **`sm_61` (Pascal)** on
+Windows — and **`sm_50` (Maxwell)** on Linux — through `sm_90`, so Pascal and
+Volta cards are sent there automatically.
+
+> **Maxwell on Windows:** the Windows `cu126` wheel omits `sm_50`/`sm_52`, so a
+> Maxwell card (GTX 9xx, GTX 745/750) may still report "no kernel image" on
+> Windows. `patent-creator status` will flag the mismatch rather than failing
+> silently. Linux `cu126` wheels do include Maxwell.
+
+**If `nvidia-smi` can't report compute capability** (older drivers predate the
+field), the wheel is chosen from the GPU's product *name* instead: recognized
+pre-Turing cards still get `cu126`, and everything else defaults to `cu128`. You
+can always force the choice with `PATENT_TORCH_CUDA=cu126` or
+`PATENT_TORCH_CUDA=cu128`.
+
 ## Troubleshooting
 
 ### "CUDA out of memory" errors
@@ -208,6 +236,31 @@ python -c "import torch; print(f'CUDA: {torch.cuda.is_available()}')"
 pip uninstall torch torchvision
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
 ```
+
+### "no kernel image is available for execution on the device"
+
+Your PyTorch build has no compiled kernels for your GPU's architecture —
+typically a pre-Turing card (GTX 10-series and older, compute capability < 7.5)
+that received a `cu128` build. Reinstall the `cu126` build (kernels `sm_61`–`sm_90`
+on Windows, `sm_50`–`sm_90` on Linux):
+
+```powershell
+pip uninstall -y torch torchvision
+pip install torch==2.7.1 torchvision==0.22.1 --index-url https://download.pytorch.org/whl/cu126
+```
+
+Or set `PATENT_TORCH_CUDA=cu126` before `patent-creator setup` to force the
+legacy wheel — handy when auto-detection can't read your GPU's compute
+capability.
+
+Confirm your GPU's architecture is now supported:
+
+```powershell
+python -c "import torch; print(torch.cuda.get_arch_list())"
+```
+
+`patent-creator setup` selects the correct wheel automatically, so this is only
+needed for manual installs.
 
 ### Multiple Python installations conflict
 
@@ -272,6 +325,37 @@ This runs index building on CPU (slower but no VRAM limit). GPU is still used fo
 EMBED_BATCH_SIZE=16 patent-creator rebuild-index
 ```
 Default batch size may be too large for GPUs with less VRAM. Try 16 or 8.
+
+## macOS / Apple Silicon
+
+On Apple Silicon (M-series) Macs, the embedding and reranker models run on **CPU
+by default** — and that is intentional. Apple's Metal (MPS) backend runs the
+BGE-base embedding workload roughly **50x slower** than CPU, so CPU is the
+faster choice here. The setup auto-detects this and stays on CPU.
+
+If you have a specific reason to use MPS anyway, opt in explicitly:
+```bash
+PATENT_MPEP_DEVICE=mps patent-creator setup --rebuild --non-interactive
+```
+
+To force CPU explicitly (either of these works):
+```bash
+FORCE_CPU=1 patent-creator setup --rebuild --non-interactive
+# or, equivalently:
+PATENT_MPEP_DEVICE=cpu patent-creator setup --rebuild --non-interactive
+```
+
+### `SSL: CERTIFICATE_VERIFY_FAILED` when downloading MPEP
+
+If the MPEP download fails with `[SSL: CERTIFICATE_VERIFY_FAILED] ... unable to
+get local issuer certificate`, you are almost certainly on the python.org macOS
+build of Python, which ships OpenSSL **without** a system CA bundle. The
+downloader now verifies against the bundled `certifi` CA store automatically, so
+this should resolve itself. If you are on an older build, you can also run the
+one-time fix that ships with the installer:
+```bash
+/Applications/Python\ 3.11/Install\ Certificates.command
+```
 
 ## Support
 
